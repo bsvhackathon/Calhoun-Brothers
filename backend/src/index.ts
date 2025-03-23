@@ -23,12 +23,14 @@ export class GameSession {
     gameStarted: boolean;
     worldWidth: number;
     obstacles: any[];
+    newObstacles: any[];
     lastObstacleSpawn: number;
     player: {
       position: { x: number; y: number; z: number };
       rotation: { x: number; y: number; z: number };
       speed: number;
     };
+    movement: { left: boolean; right: boolean }; // Track movement state
   };
 
   constructor(client: WebSocket) {
@@ -41,12 +43,14 @@ export class GameSession {
       gameStarted: false,
       worldWidth: 60,
       obstacles: [],
+      newObstacles: [],
       lastObstacleSpawn: 0,
       player: {
         position: { x: 0, y: -0.5, z: 5 },
         rotation: { x: -Math.PI / 2, y: 0, z: 0 },
         speed: .4
-      }
+      },
+      movement: { left: false, right: false } // Initialize movement state
     };
   }
 
@@ -115,7 +119,8 @@ export class GameSession {
 
     // Add new obstacles to the state
     this.state.obstacles.push(...obstacles);
-    return obstacles;
+    this.state.newObstacles.push(...obstacles);
+    // return obstacles;
   }
 
   checkCollisions() {
@@ -204,24 +209,37 @@ export class GameSession {
   update() {
     if (!this.state.gameStarted || this.state.isGameOver) return;
 
+    // Update player position based on movement state
+    if (this.state.movement.left) {
+      this.state.player.position.x -= this.state.player.speed;
+      this.state.player.rotation.z = Math.min(this.state.player.rotation.z + 0.1, 0.3);
+    }
+    if (this.state.movement.right) {
+      this.state.player.position.x += this.state.player.speed;
+      this.state.player.rotation.z = Math.max(this.state.player.rotation.z - 0.1, -0.3);
+    }
+    if (!this.state.movement.left && !this.state.movement.right) {
+      this.state.player.rotation.z *= 0.9;
+    }
+
+    this.state.player.position.x = this.wrapCoordinate(this.state.player.position.x);
+
     // Update score
     this.state.score += 0.1;
 
-
+    // spawn new obstacles if necessary
     this.state.lastObstacleSpawn++;
     if (this.state.lastObstacleSpawn >= this.state.spawnInterval) {
-      const newObstacles = this.createObstaclePattern();
-      this.state.obstacles.push(...newObstacles);
+      this.createObstaclePattern();
       this.state.lastObstacleSpawn = 0;
     }
 
+    // update existing obstacles
     for (let i = this.state.obstacles.length - 1; i >= 0; i--) {
       const obstacle = this.state.obstacles[i];
-      obstacle.position.z += this.state.speed;
-      obstacle.rotation.x += 0.01;
-      obstacle.rotation.y += 0.01;
+      obstacle.z += this.state.speed;
 
-      if (obstacle.position.z > 15) {
+      if (obstacle.z > 15) {
         this.state.obstacles.splice(i, 1);
       }
     }
@@ -234,27 +252,34 @@ export class GameSession {
 
   handleMessage(message: string) {
     try {
-      console.log(message)
-      const data = JSON.parse(message);
-      if (data.type === 'move') {
-        const newX = this.state.player.position.x + (data.direction === 'left' ? -0.4 : 0.4);
-        this.state.player.position.x = Math.max(-this.state.worldWidth / 2, Math.min(this.state.worldWidth / 2, newX));
-      } else if (data.type === 'start') {
-        this.state.gameStarted = true;
-      }
+        const data = JSON.parse(message);
+        switch (data.type) {
+            case 'moveUpdate':
+                // Update both states explicitly - use false if not present
+                this.state.movement.left = data.left === true;
+                this.state.movement.right = data.right === true;
+                break;
+            case 'start':
+                this.state.gameStarted = true;
+                break;
+            default:
+                console.log('Unknown message type:', data.type);
+        }
     } catch (err) {
-      console.error('Invalid message from client:', err);
+        console.error('Invalid message from client:', err);
     }
-  }
+}
 
   sendUpdate() {
     if (this.client.readyState === WebSocket.OPEN) {
       this.client.send(JSON.stringify({
         score: this.state.score,
         player: this.state.player,
-        obstacles: this.state.obstacles,
-        isGameOver: this.state.isGameOver
+        obstacles: this.state.newObstacles,
+        isGameOver: this.state.isGameOver,
+        speed: this.state.speed
       }));
+      this.state.newObstacles = [];
     }
   }
 }
@@ -264,34 +289,36 @@ class GameServer {
   private sessions: Map<WebSocket, GameSession>;
 
   constructor() {
-      this.sessions = new Map(); // Map WebSocket client to GameSession
+    this.sessions = new Map(); // Map WebSocket client to GameSession
   }
 
   startGameLoop() {
-      setInterval(() => this.updateSessions(), 1000 / 60); // 60 FPS
+    setInterval(() => this.updateSessions(), 1000 / 60); // 60 FPS
   }
 
   updateSessions() {
-      for (const session of this.sessions.values()) {
-          session.  update();
-      }
+    // console.log(this.sessions)
+    for (const session of this.sessions.values()) {
+      // console.log(session)
+      session.update();
+    }
   }
 
   addSession(client: WebSocket) {
-      const session = new GameSession(client);
-      this.sessions.set(client, session);
-      return session;
+    const session = new GameSession(client);
+    this.sessions.set(client, session);
+    return session;
   }
 
   removeSession(client: WebSocket) {
-      this.sessions.delete(client);
+    this.sessions.delete(client);
   }
 
   handleClientMessage(client: WebSocket, message: string) {
-      const session = this.sessions.get(client);
-      if (session) {
-          session.handleMessage(message);
-      }
+    const session = this.sessions.get(client);
+    if (session) {
+      session.handleMessage(message);
+    }
   }
 }
 
@@ -300,25 +327,26 @@ app.use(express.json());
 
 
 const gameServer = new GameServer();
+gameServer.startGameLoop();
 
 // WebSocket connection handling
 wss.on('connection', (ws) => {
-    console.log('New client connected');
-    const session = gameServer.addSession(ws);
+  console.log('New client connected');
+  const session = gameServer.addSession(ws);
 
-    ws.on('message', (message) => {
-        gameServer.handleClientMessage(ws, message.toString());
-    });
+  ws.on('message', (message) => {
+    gameServer.handleClientMessage(ws, message.toString());
+  });
 
-    ws.on('close', () => {
-        gameServer.removeSession(ws);
-        console.log('Client disconnected');
-    });
+  ws.on('close', () => {
+    gameServer.removeSession(ws);
+    console.log('Client disconnected');
+  });
 
-    ws.on('error', (err) => {
-        console.error('WebSocket error:', err);
-        gameServer.removeSession(ws);
-    });
+  ws.on('error', (err) => {
+    console.error('WebSocket error:', err);
+    gameServer.removeSession(ws);
+  });
 });
 
 app.get('/', (req: Request, res: Response) => {
