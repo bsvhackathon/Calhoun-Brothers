@@ -10,8 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@bsv/sdk": "^1.4.9",
     "@tailwindcss/vite": "^4.0.15",
-    "@stripe/stripe-js": "^2.4.0",
     "axios": "^1.8.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

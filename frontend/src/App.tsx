@@ -1,6 +1,10 @@
-// public/client.js
+
 import * as THREE from 'three';
 
+import {
+  AuthFetch,
+  WalletClient,
+} from '@bsv/sdk'
 
 interface ServerObstacle {
   x: number;
@@ -9,7 +13,7 @@ interface ServerObstacle {
 }
 
 export class GameClient {
-  private ws: WebSocket;
+  private ws: WebSocket | null;
   private scene: THREE.Scene | null;
   private camera: THREE.PerspectiveCamera | null;
   private renderer: THREE.WebGLRenderer | null;
@@ -32,8 +36,11 @@ export class GameClient {
   private lastFrameTime: number = 0;
   private deltaTime: number = 0;
   private playerHorizontalSpeed: number;
+  private wallet: WalletClient | null; // Add wallet property
+  private connectButton: HTMLButtonElement | null; // Add connect button property
+  
   constructor() {
-    this.ws = new WebSocket('ws://localhost:3001'); // Match backend port
+    this.ws = null;
     this.scene = null;
     this.camera = null;
     this.renderer = null;
@@ -43,16 +50,19 @@ export class GameClient {
     this.gameStarted = false;
     this.isUnlocked = false;
     this.score = 0;
-    this.speed = 30;
+    this.speed = 60;
     this.worldWidth = 60;
     this.isGameOver = false;
     this.playerBoundingBox = new THREE.Box3();
     this.lastUpdateTime = 0;
     this.gameContainer = null;
-    this.playerHorizontalSpeed = 0.5;
+    this.playerHorizontalSpeed = 0.7;
+    this.wallet = null; // Initialize wallet property
+    this.connectButton = null; // Initialize connect button property
   }
 
   setupWebSocket() {
+    this.ws = new WebSocket('ws://localhost:3001'); // Match backend port
     this.ws.onopen = () => console.log('Connected to server');
     this.ws.onmessage = (event) => {
       // console.log(event)
@@ -299,14 +309,117 @@ export class GameClient {
       document.getElementById('gameContainer')!.appendChild(scoreDiv);
     }
 
+    // Create the connect button in the top right
+    this.createConnectButton();
+    
     // Create the start button outside of the game container
     this.createStartButton();
+  }
+
+  // Add new method to create connect button
+  createConnectButton() {
+    const connectButton = document.createElement('button');
+    connectButton.id = 'connectWalletButton';
+    connectButton.innerText = 'Connect Wallet';
+    connectButton.style.position = 'fixed';
+    connectButton.style.top = '20px';
+    connectButton.style.right = '20px';
+    connectButton.style.padding = '10px 20px';
+    connectButton.style.fontSize = '16px';
+    connectButton.style.backgroundColor = '#00aaff';
+    connectButton.style.color = 'white';
+    connectButton.style.border = 'none';
+    connectButton.style.borderRadius = '8px';
+    connectButton.style.cursor = 'pointer';
+    connectButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.3)';
+    connectButton.style.zIndex = '2500'; // Higher than other elements
+    
+    // Hover effects
+    connectButton.addEventListener('mouseover', () => {
+      connectButton.style.backgroundColor = '#0088cc';
+      connectButton.style.transform = 'scale(1.05)';
+    });
+    
+    connectButton.addEventListener('mouseout', () => {
+      connectButton.style.backgroundColor = '#00aaff';
+      connectButton.style.transform = 'scale(1)';
+    });
+    
+    // Click handler to connect to wallet
+    connectButton.addEventListener('click', async () => {
+      try {
+        // Create and initialize the wallet client
+        this.wallet = await new WalletClient('json-api', 'localhost');
+        
+        // Check if authenticated and get wallet info
+        const isAuthenticated = await this.wallet.isAuthenticated();
+        console.log('Wallet authenticated:', isAuthenticated);
+        
+        if (isAuthenticated) {
+          // Update button text to indicate connected state
+          connectButton.innerText = 'Wallet Connected';
+          connectButton.style.backgroundColor = '#00cc66';
+          
+          // Get wallet details
+          const publicKey = await this.wallet.getPublicKey({
+            identityKey: true
+          });
+          console.log('Public key:', publicKey);
+          
+          const version = await this.wallet.getVersion();
+          console.log('Wallet version:', version);
+          
+          // Create auth fetch instance
+          const client = await new AuthFetch(this.wallet);
+          console.log('Auth client initialized:', client);
+          
+          // Enable the start button now that wallet is connected
+          const startButton = document.getElementById('startGameButton') as HTMLButtonElement;
+          if (startButton) {
+            startButton.disabled = false;
+            startButton.style.opacity = '1';
+            startButton.style.cursor = 'pointer';
+            startButton.title = 'Click to start the game';
+            
+            // Update instruction text to indicate next step
+            const instructionText = document.getElementById('gameInstructions');
+            if (instructionText) {
+              instructionText.innerHTML = 'Step 1: ✅ Wallet Connected<br>Step 2: Click Insert Coins to play';
+              instructionText.style.color = '#00cc66';
+            }
+          }
+        } else {
+          console.log('Wallet not authenticated');
+          connectButton.innerText = 'Authentication Failed';
+          connectButton.style.backgroundColor = '#ff3333';
+          
+          // Reset after 2 seconds
+          setTimeout(() => {
+            connectButton.innerText = 'Connect Wallet';
+            connectButton.style.backgroundColor = '#00aaff';
+          }, 2000);
+        }
+      } catch (error) {
+        console.error('[ERROR] Failed to connect to wallet:', error);
+        connectButton.innerText = 'Connection Failed';
+        connectButton.style.backgroundColor = '#ff3333';
+        
+        // Reset after 2 seconds
+        setTimeout(() => {
+          connectButton.innerText = 'Connect Wallet';
+          connectButton.style.backgroundColor = '#00aaff';
+        }, 2000);
+      }
+    });
+    
+    document.body.appendChild(connectButton);
+    this.connectButton = connectButton;
   }
 
   createStartButton() {
     const startButton = document.createElement('button');
     startButton.id = 'startGameButton';
-    startButton.innerText = 'UNLOCK GAME';
+    startButton.innerText = 'Insert Coins';
     startButton.style.position = 'fixed';
     startButton.style.bottom = '50px';
     startButton.style.left = '50%';
@@ -317,40 +430,85 @@ export class GameClient {
     startButton.style.color = 'white';
     startButton.style.border = 'none';
     startButton.style.borderRadius = '8px';
-    startButton.style.cursor = 'pointer';
+    startButton.style.cursor = 'not-allowed'; // Show not-allowed cursor when disabled
     startButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.3)';
     startButton.style.zIndex = '2000'; // Ensure it's above the game container
+    startButton.style.opacity = '0.5'; // Make it look disabled
+    startButton.disabled = true; // Actually disable the button
+    startButton.title = 'Connect wallet first to enable'; // Add tooltip
     
     // Create instruction text above the button
     const instructionText = document.createElement('div');
+    instructionText.id = 'gameInstructions'; // Add an ID for easy reference
     instructionText.style.position = 'fixed';
     instructionText.style.bottom = '110px';
     instructionText.style.left = '50%';
     instructionText.style.transform = 'translateX(-50%)';
-    instructionText.style.color = 'white';
+    instructionText.style.color = '#ff9900'; // Orange color to indicate action needed
     instructionText.style.fontSize = '18px';
     instructionText.style.textAlign = 'center';
     instructionText.style.zIndex = '2000';
-    instructionText.innerHTML = 'Step 1: Click to unlock<br>Step 2: Use arrow keys to play';
+    instructionText.innerHTML = 'Step 1: Connect wallet in top right<br>Step 2: Insert coins to play';
     document.body.appendChild(instructionText);
     
-    // Hover effect
+    // Hover effect - only applied when button is enabled
     startButton.addEventListener('mouseover', () => {
-      startButton.style.backgroundColor = '#0088cc';
-      startButton.style.transform = 'translateX(-50%) scale(1.05)';
+      if (!startButton.disabled) {
+        startButton.style.backgroundColor = '#0088cc';
+        startButton.style.transform = 'translateX(-50%) scale(1.05)';
+      }
     });
     
     startButton.addEventListener('mouseout', () => {
-      startButton.style.backgroundColor = '#00aaff';
-      startButton.style.transform = 'translateX(-50%)';
+      if (!startButton.disabled) {
+        startButton.style.backgroundColor = '#00aaff';
+        startButton.style.transform = 'translateX(-50%)';
+      }
     });
     
     // Click effect
-    startButton.addEventListener('click', () => {
-      this.setupWebSocket();
-      this.startGame();
-      startButton.remove(); // Remove the button after starting
-      instructionText.remove(); // Also remove the instruction text
+    startButton.addEventListener('click', async () => {
+      // Check if button is disabled - should not execute if disabled
+      if (startButton.disabled) {
+        return;
+      }
+      
+      // PAY HERE
+      // Check if we already have a wallet connection, if not try to connect
+      if (!this.wallet) {
+        try {
+          // Create the wallet client and AuthFetch instance.
+          this.wallet = await new WalletClient('json-api', 'localhost');
+          console.log(await this.wallet.isAuthenticated());
+          const test = await this.wallet.getPublicKey({
+            identityKey: true
+          });
+          console.log(test);
+
+          const test2 = await this.wallet.getVersion();
+          console.log(test2);
+          
+          const client = await new AuthFetch(this.wallet);
+          console.log(this.wallet);
+          console.log(client);
+          
+          // Update connect button if it exists
+          if (this.connectButton) {
+            this.connectButton.innerText = 'Wallet Connected';
+            this.connectButton.style.backgroundColor = '#00cc66';
+          }
+        } catch (error) {
+          console.error('[ERROR] Failed to retrieve wallet data:', error);
+          return; // Don't proceed if wallet connection fails
+        }
+      }
+
+      if (await this.wallet?.isAuthenticated()) {
+        this.setupWebSocket();
+        this.startGame();
+        startButton.remove(); // Remove the button after starting
+        instructionText.remove(); // Also remove the instruction text
+      }
     });
     
     document.body.appendChild(startButton);
@@ -403,7 +561,7 @@ export class GameClient {
         }
         
         // Notify server that game has started
-        this.ws.send(JSON.stringify({
+        this.ws!.send(JSON.stringify({
           type: 'start',
         }));
         
@@ -504,8 +662,8 @@ export class GameClient {
       this.camera.position.x = this.player!.position.x;
     }
 
-    // Send player coordinates every 50ms
-    if (currentTime - this.lastUpdateTime >= 60) {
+    // Send player coordinates every 50ms - check that ws exists
+    if (currentTime - this.lastUpdateTime >= 60 && this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({
         type: 'playerUpdate',
         position: {

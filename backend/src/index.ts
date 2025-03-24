@@ -39,8 +39,8 @@ export class GameSession {
     this.state = {
       score: 0,
       isGameOver: false,
-      speed: 30,
-      spawnInterval: 15,
+      speed: 60,
+      spawnInterval: 30,
       gameStarted: false,
       worldWidth: 60,
       obstacles: [],
@@ -49,7 +49,7 @@ export class GameSession {
       player: {
         position: { x: 0, y: -0.5, z: 5 },
         rotation: { x: -Math.PI / 2, y: 0, z: 0 },
-        horizontalSpeed: .5
+        horizontalSpeed: .7
       },
       movement: { left: false, right: false } // Initialize movement state
     };
