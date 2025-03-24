@@ -17,12 +17,14 @@ export class GameClient {
   private obstacles: THREE.Mesh[];
   private keys: { left: boolean; right: boolean };
   private gameStarted: boolean;
+  private isUnlocked: boolean;
   private score: number;
   private isGameOver: boolean;
   private speed: number;
   private worldWidth: number;
   private playerBoundingBox: THREE.Box3;
   private lastUpdateTime: number;
+  private gameContainer: HTMLDivElement | null;
   // Add these properties
   private obstacleVelocities: Map<THREE.Mesh, THREE.Vector3> = new Map(); // Store velocities for prediction
   private serverObstaclePositions: Map<THREE.Mesh, THREE.Vector3> = new Map(); // Store server-provided positions
@@ -39,13 +41,14 @@ export class GameClient {
     this.obstacles = [];
     this.keys = { left: false, right: false };
     this.gameStarted = false;
+    this.isUnlocked = false;
     this.score = 0;
     this.speed = 30;
     this.worldWidth = 60;
     this.isGameOver = false;
     this.playerBoundingBox = new THREE.Box3();
     this.lastUpdateTime = 0;
-    this.setupWebSocket();
+    this.gameContainer = null;
     this.playerHorizontalSpeed = 0.5;
   }
 
@@ -143,7 +146,11 @@ export class GameClient {
     gameContainer.style.border = '2px solid #333';
     gameContainer.style.borderRadius = '10px';
     gameContainer.style.overflow = 'hidden';
+    // Add blur effect initially
+    gameContainer.style.filter = 'blur(5px)';
+    gameContainer.style.pointerEvents = 'none'; // Disable interaction with blurred game
     document.body.appendChild(gameContainer);
+    this.gameContainer = gameContainer;
 
     this.camera = new THREE.PerspectiveCamera(75, 1200 / 675, 0.1, 1000);
     this.camera.position.y = 6;
@@ -266,6 +273,7 @@ export class GameClient {
   }
 
   initializeUI() {
+    // Create in-game start prompt (will be blurred with the game)
     const startPrompt = document.createElement('div');
     startPrompt.id = 'startPrompt';
     startPrompt.style.position = 'absolute';
@@ -276,7 +284,7 @@ export class GameClient {
     startPrompt.style.fontSize = '24px';
     startPrompt.style.textAlign = 'center';
     startPrompt.style.zIndex = '1000';
-    startPrompt.innerHTML = 'Press any arrow key to start!';
+    startPrompt.innerHTML = 'Game paused. Click START button to continue.';
     document.getElementById('gameContainer')!.appendChild(startPrompt);
 
     if (!document.getElementById('scoreValue')) {
@@ -289,6 +297,83 @@ export class GameClient {
       scoreDiv.style.zIndex = '1000';
       scoreDiv.textContent = '0';
       document.getElementById('gameContainer')!.appendChild(scoreDiv);
+    }
+
+    // Create the start button outside of the game container
+    this.createStartButton();
+  }
+
+  createStartButton() {
+    const startButton = document.createElement('button');
+    startButton.id = 'startGameButton';
+    startButton.innerText = 'UNLOCK GAME';
+    startButton.style.position = 'fixed';
+    startButton.style.bottom = '50px';
+    startButton.style.left = '50%';
+    startButton.style.transform = 'translateX(-50%)';
+    startButton.style.padding = '15px 40px';
+    startButton.style.fontSize = '24px';
+    startButton.style.backgroundColor = '#00aaff';
+    startButton.style.color = 'white';
+    startButton.style.border = 'none';
+    startButton.style.borderRadius = '8px';
+    startButton.style.cursor = 'pointer';
+    startButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.3)';
+    startButton.style.zIndex = '2000'; // Ensure it's above the game container
+    
+    // Create instruction text above the button
+    const instructionText = document.createElement('div');
+    instructionText.style.position = 'fixed';
+    instructionText.style.bottom = '110px';
+    instructionText.style.left = '50%';
+    instructionText.style.transform = 'translateX(-50%)';
+    instructionText.style.color = 'white';
+    instructionText.style.fontSize = '18px';
+    instructionText.style.textAlign = 'center';
+    instructionText.style.zIndex = '2000';
+    instructionText.innerHTML = 'Step 1: Click to unlock<br>Step 2: Use arrow keys to play';
+    document.body.appendChild(instructionText);
+    
+    // Hover effect
+    startButton.addEventListener('mouseover', () => {
+      startButton.style.backgroundColor = '#0088cc';
+      startButton.style.transform = 'translateX(-50%) scale(1.05)';
+    });
+    
+    startButton.addEventListener('mouseout', () => {
+      startButton.style.backgroundColor = '#00aaff';
+      startButton.style.transform = 'translateX(-50%)';
+    });
+    
+    // Click effect
+    startButton.addEventListener('click', () => {
+      this.setupWebSocket();
+      this.startGame();
+      startButton.remove(); // Remove the button after starting
+      instructionText.remove(); // Also remove the instruction text
+    });
+    
+    document.body.appendChild(startButton);
+  }
+  
+  startGame() {
+    if (!this.isUnlocked) {
+      // Remove blur and enable interaction
+      if (this.gameContainer) {
+        this.gameContainer.style.filter = 'none';
+        this.gameContainer.style.pointerEvents = 'auto';
+      }
+      
+      // Update start prompt to guide the user to the next step
+      const startPrompt = document.getElementById('startPrompt');
+      if (startPrompt) {
+        startPrompt.innerHTML = 'Press LEFT or RIGHT arrow key to begin!';
+        startPrompt.style.fontSize = '28px';
+        startPrompt.style.color = '#00aaff';
+      }
+      
+      // Set the game as unlocked, but not yet started
+      this.isUnlocked = true;
     }
   }
 
@@ -306,31 +391,53 @@ export class GameClient {
     });
 
     window.addEventListener('keydown', (e) => {
-      if (!this.gameStarted) {
+      // Only process arrow keys if the game is unlocked but not yet started
+      if (this.isUnlocked && !this.gameStarted && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        // This is the second step of starting the game - pressing an arrow key
         this.gameStarted = true;
-        document.getElementById('startPrompt')!.style.display = 'none';
+        
+        // Hide the start prompt
+        const startPrompt = document.getElementById('startPrompt');
+        if (startPrompt) {
+          startPrompt.style.display = 'none';
+        }
+        
+        // Notify server that game has started
         this.ws.send(JSON.stringify({
           type: 'start',
         }));
-      }
-      switch (e.key) {
-        case 'ArrowLeft':
+        
+        // Also register this first key press
+        if (e.key === 'ArrowLeft') {
           this.keys.left = true;
-          break;
-        case 'ArrowRight':
+        } else if (e.key === 'ArrowRight') {
           this.keys.right = true;
-          break;
+        }
+      }
+      // Process regular key input only if game has actually started
+      else if (this.gameStarted) {
+        switch (e.key) {
+          case 'ArrowLeft':
+            this.keys.left = true;
+            break;
+          case 'ArrowRight':
+            this.keys.right = true;
+            break;
+        }
       }
     });
 
     window.addEventListener('keyup', (e) => {
-      switch (e.key) {
-        case 'ArrowLeft':
-          this.keys.left = false;
-          break;
-        case 'ArrowRight':
-          this.keys.right = false;
-          break;
+      // Only process key up events if the game has started
+      if (this.gameStarted) {
+        switch (e.key) {
+          case 'ArrowLeft':
+            this.keys.left = false;
+            break;
+          case 'ArrowRight':
+            this.keys.right = false;
+            break;
+        }
       }
     });
   }
@@ -346,6 +453,7 @@ export class GameClient {
     gameOverDiv.style.padding = '20px';
     gameOverDiv.style.borderRadius = '10px';
     gameOverDiv.style.textAlign = 'center';
+    gameOverDiv.style.zIndex = '3000'; // Ensure it's above everything
     gameOverDiv.innerHTML = `
                 <h2>Game Over!</h2>
                 <p>Score: ${Math.floor(this.score)}</p>
