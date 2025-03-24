@@ -28,18 +28,19 @@ export class GameSession {
     player: {
       position: { x: number; y: number; z: number };
       rotation: { x: number; y: number; z: number };
-      speed: number;
+      horizontalSpeed: number;
     };
-    movement: { left: boolean; right: boolean }; // Track movement state
+    movement: { left: boolean; right: boolean }; // Track movement state  
   };
+  private lastUpdateTime: number;
 
   constructor(client: WebSocket) {
     this.client = client; // WebSocket connection for this session
     this.state = {
       score: 0,
       isGameOver: false,
-      speed: 0.3,
-      spawnInterval: 45,
+      speed: 30,
+      spawnInterval: 15,
       gameStarted: false,
       worldWidth: 60,
       obstacles: [],
@@ -48,10 +49,11 @@ export class GameSession {
       player: {
         position: { x: 0, y: -0.5, z: 5 },
         rotation: { x: -Math.PI / 2, y: 0, z: 0 },
-        speed: .4
+        horizontalSpeed: .5
       },
       movement: { left: false, right: false } // Initialize movement state
     };
+    this.lastUpdateTime = Date.now();
   }
 
   createObstacle(x: number, z: number) {
@@ -65,7 +67,9 @@ export class GameSession {
     return positions.map(xPos => ({
       x: xPos,
       z: z,
-      size: 1.2 + Math.random() * 0.4
+      size: 1.2 + Math.random() * 0.4,
+      vx: 0, // Static in x direction for now
+      vz: this.state.speed // Move toward player at game speed
     }));
   }
 
@@ -206,10 +210,10 @@ export class GameSession {
     // return false;
   }
 
-  update() {
+  update(deltaTime: number) {
     if (!this.state.gameStarted || this.state.isGameOver) return;
     // Update score
-    this.state.score += 0.1;
+    this.state.score += 0.1 * deltaTime * 60; // Normalize score to 60 FPS
 
     // spawn new obstacles if necessary
     this.state.lastObstacleSpawn++;
@@ -221,7 +225,8 @@ export class GameSession {
     // update existing obstacles
     for (let i = this.state.obstacles.length - 1; i >= 0; i--) {
       const obstacle = this.state.obstacles[i];
-      obstacle.z += this.state.speed;
+      obstacle.x += obstacle.vx * deltaTime;
+      obstacle.z += obstacle.vz * deltaTime;
 
       if (obstacle.z > 15) {
         this.state.obstacles.splice(i, 1);
@@ -240,6 +245,7 @@ export class GameSession {
         switch (data.type) {
             case 'start':
                 this.state.gameStarted = true;
+                this.sendUpdate(); // Send initial state immediately
                 break;
             case 'playerUpdate':
                 // Update player position and rotation
@@ -272,6 +278,7 @@ export class GameSession {
         score: this.state.score,
         obstacles: this.state.newObstacles,
         isGameOver: this.state.isGameOver,
+        horizontalSpeed: this.state.player.horizontalSpeed,
         speed: this.state.speed
       }));
       this.state.newObstacles = [];
@@ -282,20 +289,30 @@ export class GameSession {
 // Manages all game sessions
 class GameServer {
   private sessions: Map<WebSocket, GameSession>;
+  private lastUpdateTime: number;
 
   constructor() {
     this.sessions = new Map(); // Map WebSocket client to GameSession
+    this.lastUpdateTime = Date.now();
   }
 
   startGameLoop() {
-    setInterval(() => this.updateSessions(), 1000 / 60); // 60 FPS
+    const update = () => {
+      const currentTime = Date.now();
+      const deltaTime = (currentTime - this.lastUpdateTime) / 1000; // Convert to seconds
+      this.lastUpdateTime = currentTime;
+
+      this.updateSessions(deltaTime);
+      setTimeout(update, 1000 / 60); // Aim for 60 FPS
+    };
+    update();
   }
 
-  updateSessions() {
+  updateSessions(deltaTime: number) {
     // console.log(this.sessions)
     for (const session of this.sessions.values()) {
       // console.log(session)
-      session.update();
+      session.update(deltaTime);
     }
   }
 

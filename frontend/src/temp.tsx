@@ -22,7 +22,13 @@ export class GameClient {
     private worldWidth: number;
     private playerBoundingBox: THREE.Box3;
     private lastUpdateTime: number;
-
+    // Add these properties
+    private obstacleVelocities: Map<THREE.Mesh, THREE.Vector3> = new Map(); // Store velocities for prediction
+    private serverObstaclePositions: Map<THREE.Mesh, THREE.Vector3> = new Map(); // Store server-provided positions
+    private correctionTime: number = 0.2; // Time (in seconds) to interpolate to server position
+    private lastFrameTime: number = 0;
+    private deltaTime: number = 0;
+    private playerHorizontalSpeed: number;
     constructor() {
         this.ws = new WebSocket('ws://localhost:3001'); // Match backend port
         this.scene = null;
@@ -33,12 +39,13 @@ export class GameClient {
         this.keys = { left: false, right: false };
         this.gameStarted = false;
         this.score = 0;
-        this.speed = 0.3;
+        this.speed = 30;
         this.worldWidth = 60;
         this.isGameOver = false;
         this.playerBoundingBox = new THREE.Box3();
         this.lastUpdateTime = 0;
         this.setupWebSocket();
+        this.playerHorizontalSpeed = 0.5;
     }
 
     setupWebSocket() {
@@ -53,13 +60,13 @@ export class GameClient {
     }
 
     updateFromServer(data: any) {
-        
         this.score = data.score || 0;
         const scoreElement = document.getElementById('scoreValue');
         if (scoreElement) {
             scoreElement.textContent = Math.floor(this.score).toString();
         }
         this.speed = data.speed;
+        this.playerHorizontalSpeed = data.horizontalSpeed;
         if (data.obstacles) {
             this.createObstacles(data.obstacles);
         }
@@ -69,6 +76,36 @@ export class GameClient {
             this.showGameOver();
         }
     }
+
+        // Sync client obstacles with server data
+        syncObstacles(serverObstacles: ServerObstacle[]) {
+            const existingObstacles = new Set(this.obstacles);
+    
+            serverObstacles.forEach((data, index) => {
+                let obstacle = this.obstacles[index];
+                if (!obstacle) {
+                    // Create new obstacle if it doesn't exist
+                    const obstacleGeometry = new THREE.BoxGeometry(data.size, data.size, data.size);
+                    const obstacleMaterial = new THREE.MeshPhongMaterial({
+                        color: 0xff0000,
+                        emissive: 0xff0000,
+                        emissiveIntensity: 0.5,
+                        transparent: true,
+                        opacity: 0.9,
+                        shininess: 100
+                    });
+                    obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
+                    this.scene!.add(obstacle);
+                    this.obstacles.push(obstacle);
+                    this.obstacleVelocities.set(obstacle, new THREE.Vector3(0, 0, this.speed)); // Assume constant velocity
+                }
+    
+                // Store server position for correction
+                const serverPos = new THREE.Vector3(data.x, 0, data.z);
+                this.serverObstaclePositions.set(obstacle, serverPos);
+                existingObstacles.delete(obstacle);
+            });
+        }
 
     createObstacles(obstacleData: ServerObstacle[]) {
         obstacleData.forEach(data => {
@@ -305,6 +342,9 @@ export class GameClient {
     }
 
     animate() {
+        const currentTime = Date.now();
+        this.deltaTime = (currentTime - this.lastFrameTime) / 1000; // Convert to seconds
+        this.lastFrameTime = currentTime;
         requestAnimationFrame(() => this.animate());
     
         // Update scene elements
@@ -323,10 +363,10 @@ export class GameClient {
         const currentTime = Date.now();
         let player = this.player;
         if (this.keys.left) {
-            player!.position.x -= this.speed;
+            player!.position.x -= this.playerHorizontalSpeed;
             player!.rotation.z = Math.min(this.player!.rotation.z + 0.1, 0.3);
         } else if (this.keys.right) {
-            player!.position.x += this.speed;
+            player!.position.x += this.playerHorizontalSpeed;
             player!.rotation.z = Math.max(this.player!.rotation.z - 0.1, -0.3);
         } else {
             player!.rotation.z *= 0.9;
@@ -342,7 +382,7 @@ export class GameClient {
         }
 
         // Send player coordinates every 50ms
-        if (currentTime - this.lastUpdateTime >= 30) {
+        if (currentTime - this.lastUpdateTime >= 60) {
             this.ws.send(JSON.stringify({
                 type: 'playerUpdate',
                 position: {
@@ -360,14 +400,28 @@ export class GameClient {
         }
 
         // Move obstacle updates here instead of updateFromServer
-        for (let i = this.obstacles.length - 1; i >= 0; i--) {
-            const obstacle = this.obstacles[i];
-            obstacle.position.z += this.speed;
+        
+        // Client-side prediction for obstacles
+        this.obstacles.forEach(obstacle => {
+            const velocity = this.obstacleVelocities.get(obstacle) || new THREE.Vector3(0, 0, this.speed);
+            obstacle.position.add(velocity.clone().multiplyScalar(this.deltaTime));
+
+            // Smooth correction to server position
+            const serverPos = this.serverObstaclePositions.get(obstacle);
+            if (serverPos) {
+                const currentPos = obstacle.position.clone();
+                const correctedPos = currentPos.lerp(serverPos, this.deltaTime / this.correctionTime);
+                obstacle.position.copy(correctedPos);
+            }
+
+            // Remove obstacles that go out of bounds
             if (obstacle.position.z > 15) {
                 this.scene!.remove(obstacle);
-                this.obstacles.splice(i, 1);
+                this.obstacles.splice(this.obstacles.indexOf(obstacle), 1);
+                this.obstacleVelocities.delete(obstacle);
+                this.serverObstaclePositions.delete(obstacle);
             }
-        }
+        });
     }
 
     initializeGame() {
