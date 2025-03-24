@@ -208,22 +208,6 @@ export class GameSession {
 
   update() {
     if (!this.state.gameStarted || this.state.isGameOver) return;
-
-    // Update player position based on movement state
-    if (this.state.movement.left) {
-      this.state.player.position.x -= this.state.player.speed;
-      this.state.player.rotation.z = Math.min(this.state.player.rotation.z + 0.1, 0.3);
-    }
-    if (this.state.movement.right) {
-      this.state.player.position.x += this.state.player.speed;
-      this.state.player.rotation.z = Math.max(this.state.player.rotation.z - 0.1, -0.3);
-    }
-    if (!this.state.movement.left && !this.state.movement.right) {
-      this.state.player.rotation.z *= 0.9;
-    }
-
-    this.state.player.position.x = this.wrapCoordinate(this.state.player.position.x);
-
     // Update score
     this.state.score += 0.1;
 
@@ -254,13 +238,25 @@ export class GameSession {
     try {
         const data = JSON.parse(message);
         switch (data.type) {
-            case 'moveUpdate':
-                // Update both states explicitly - use false if not present
-                this.state.movement.left = data.left === true;
-                this.state.movement.right = data.right === true;
-                break;
             case 'start':
                 this.state.gameStarted = true;
+                break;
+            case 'playerUpdate':
+                // Update player position and rotation
+                if (data.position) {
+                    this.state.player.position = {
+                        x: data.position.x,
+                        y: data.position.y,
+                        z: data.position.z
+                    };
+                }
+                if (data.rotation) {
+                    this.state.player.rotation = {
+                        x: data.rotation.x,
+                        y: data.rotation.y,
+                        z: data.rotation.z
+                    };
+                }
                 break;
             default:
                 console.log('Unknown message type:', data.type);
@@ -274,7 +270,6 @@ export class GameSession {
     if (this.client.readyState === WebSocket.OPEN) {
       this.client.send(JSON.stringify({
         score: this.state.score,
-        player: this.state.player,
         obstacles: this.state.newObstacles,
         isGameOver: this.state.isGameOver,
         speed: this.state.speed

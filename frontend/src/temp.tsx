@@ -19,9 +19,9 @@ export class GameClient {
     private score: number;
     private isGameOver: boolean;
     private speed: number;
-    private animationFrameId: number | null = null;
-    private isAnimating: boolean = false;
+    private worldWidth: number;
     private playerBoundingBox: THREE.Box3;
+    private lastUpdateTime: number;
 
     constructor() {
         this.ws = new WebSocket('ws://localhost:3001'); // Match backend port
@@ -34,8 +34,10 @@ export class GameClient {
         this.gameStarted = false;
         this.score = 0;
         this.speed = 0.3;
+        this.worldWidth = 60;
         this.isGameOver = false;
         this.playerBoundingBox = new THREE.Box3();
+        this.lastUpdateTime = 0;
         this.setupWebSocket();
     }
 
@@ -51,14 +53,7 @@ export class GameClient {
     }
 
     updateFromServer(data: any) {
-        if (this.player && data.player) {
-            this.player.position.set(data.player.position.x, data.player.position.y, data.player.position.z);
-            this.player.rotation.set(data.player.rotation.x, data.player.rotation.y, data.player.rotation.z);
-            this.playerBoundingBox.setFromObject(this.player);
-            if (this.camera) {
-                this.camera.position.x = this.player.position.x;
-            }
-        }
+        
         this.score = data.score || 0;
         const scoreElement = document.getElementById('scoreValue');
         if (scoreElement) {
@@ -66,12 +61,7 @@ export class GameClient {
         }
         this.speed = data.speed;
         if (data.obstacles) {
-            this.createObstacle(data.obstacles);
-        }
-
-        for (let i = this.obstacles.length - 1; i >= 0; i--) {
-            const obstacle = this.obstacles[i];
-            obstacle.position.z += this.speed;
+            this.createObstacles(data.obstacles);
         }
 
         this.isGameOver = data.isGameOver || false;
@@ -80,7 +70,7 @@ export class GameClient {
         }
     }
 
-    createObstacle(obstacleData: ServerObstacle[]) {
+    createObstacles(obstacleData: ServerObstacle[]) {
         obstacleData.forEach(data => {
             const obstacleGeometry = new THREE.BoxGeometry(data.size, data.size, data.size);
             const obstacleMaterial = new THREE.MeshPhongMaterial({ 
@@ -249,15 +239,6 @@ export class GameClient {
             document.body.appendChild(scoreDiv);
         }
     }
-
-    private sendMovementUpdate() {
-        // Always send the complete current state
-        this.ws.send(JSON.stringify({ 
-            type: 'moveUpdate',
-            left: this.keys.left,
-            right: this.keys.right 
-        }));
-    }
     
     initializeEventHandlers() {
         window.addEventListener('resize', () => {
@@ -271,56 +252,33 @@ export class GameClient {
                 this.renderer.setSize(newWidth, newHeight);
             }
         });
-    
+
         window.addEventListener('keydown', (e) => {
             if (!this.gameStarted) {
-                this.ws.send(JSON.stringify({ type: 'start' }));
                 this.gameStarted = true;
-                const startPrompt = document.getElementById('startPrompt');
-                if (startPrompt) {
-                    startPrompt.style.display = 'none';
-                }
-                return;
+                document.getElementById('startPrompt')!.style.display = 'none';
+                this.ws.send(JSON.stringify({
+                    type: 'start',
+                }));
             }
-    
-            let stateChanged = false;
-            switch (e.key) {
+            switch(e.key) {
                 case 'ArrowLeft':
-                    if (!this.keys.left) {
-                        this.keys.left = true;
-                        stateChanged = true;
-                    }
+                    this.keys.left = true;
                     break;
                 case 'ArrowRight':
-                    if (!this.keys.right) {
-                        this.keys.right = true;
-                        stateChanged = true;
-                    }
+                    this.keys.right = true;
                     break;
-            }
-            if (stateChanged) {
-                this.sendMovementUpdate();
             }
         });
-    
+
         window.addEventListener('keyup', (e) => {
-            let stateChanged = false;
-            switch (e.key) {
+            switch(e.key) {
                 case 'ArrowLeft':
-                    if (this.keys.left) {
-                        this.keys.left = false;
-                        stateChanged = true;
-                    }
+                    this.keys.left = false;
                     break;
                 case 'ArrowRight':
-                    if (this.keys.right) {
-                        this.keys.right = false;
-                        stateChanged = true;
-                    }
+                    this.keys.right = false;
                     break;
-            }
-            if (stateChanged) {
-                this.sendMovementUpdate();
             }
         });
     }
@@ -347,41 +305,68 @@ export class GameClient {
     }
 
     animate() {
-        if (!this.isAnimating) return;
+        requestAnimationFrame(() => this.animate());
     
-        // Update only what's necessary
+        // Update scene elements
         if (this.gameStarted && !this.isGameOver) {
-            // this.updateScene();
-            this.renderer!.render(this.scene!, this.camera!);
+            this.updateScene();
         }
     
-        this.animationFrameId = requestAnimationFrame(() => this.animate());
+        this.renderer!.render(this.scene!, this.camera!);
     }
+    wrapCoordinate(x: number) {
+        const halfWidth = this.worldWidth / 2;
+        return ((x + halfWidth) % this.worldWidth) - halfWidth;
+      }
 
     private updateScene() {
+        const currentTime = Date.now();
+        let player = this.player;
+        if (this.keys.left) {
+            player!.position.x -= this.speed;
+            player!.rotation.z = Math.min(this.player!.rotation.z + 0.1, 0.3);
+        } else if (this.keys.right) {
+            player!.position.x += this.speed;
+            player!.rotation.z = Math.max(this.player!.rotation.z - 0.1, -0.3);
+        } else {
+            player!.rotation.z *= 0.9;
+        }
+        // Validate and wrap position
+        player!.position.x = this.wrapCoordinate(player!.position.x);
+
+        this.player!.position.set(player!.position.x, player!.position.y, player!.position.z);
+        this.player!.rotation.set(player!.rotation.x, player!.rotation.y, player!.rotation.z);
+        this.playerBoundingBox.setFromObject(player!);
+        if (this.camera) {
+            this.camera.position.x = this.player!.position.x;
+        }
+
+        // Send player coordinates every 50ms
+        if (currentTime - this.lastUpdateTime >= 30) {
+            this.ws.send(JSON.stringify({
+                type: 'playerUpdate',
+                position: {
+                    x: this.player!.position.x,
+                    y: this.player!.position.y,
+                    z: this.player!.position.z
+                },
+                rotation: {
+                    x: this.player!.rotation.x,
+                    y: this.player!.rotation.y,
+                    z: this.player!.rotation.z
+                }
+            }));
+            this.lastUpdateTime = currentTime;
+        }
+
         // Move obstacle updates here instead of updateFromServer
         for (let i = this.obstacles.length - 1; i >= 0; i--) {
             const obstacle = this.obstacles[i];
             obstacle.position.z += this.speed;
-            // if (obstacle.position.z > 15) {
-            //     this.scene!.remove(obstacle);
-            //     this.obstacles.splice(i, 1);
-            // }
-        }
-    }
-
-    startAnimation() {
-        if (!this.isAnimating) {
-            this.isAnimating = true;
-            this.animate();
-        }
-    }
-
-    stopAnimation() {
-        this.isAnimating = false;
-        if (this.animationFrameId !== null) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
+            if (obstacle.position.z > 15) {
+                this.scene!.remove(obstacle);
+                this.obstacles.splice(i, 1);
+            }
         }
     }
 
@@ -392,7 +377,7 @@ export class GameClient {
         this.initializeEnvironment();
         this.initializeUI();
         this.initializeEventHandlers();
-        this.startAnimation();
+        this.animate();
     }
 }
 
