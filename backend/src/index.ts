@@ -241,36 +241,36 @@ export class GameSession {
 
   handleMessage(message: string) {
     try {
-        const data = JSON.parse(message);
-        switch (data.type) {
-            case 'start':
-                this.state.gameStarted = true;
-                this.sendUpdate(); // Send initial state immediately
-                break;
-            case 'playerUpdate':
-                // Update player position and rotation
-                if (data.position) {
-                    this.state.player.position = {
-                        x: data.position.x,
-                        y: data.position.y,
-                        z: data.position.z
-                    };
-                }
-                if (data.rotation) {
-                    this.state.player.rotation = {
-                        x: data.rotation.x,
-                        y: data.rotation.y,
-                        z: data.rotation.z
-                    };
-                }
-                break;
-            default:
-                console.log('Unknown message type:', data.type);
-        }
+      const data = JSON.parse(message);
+      switch (data.type) {
+        case 'start':
+          this.state.gameStarted = true;
+          this.sendUpdate(); // Send initial state immediately
+          break;
+        case 'playerUpdate':
+          // Update player position and rotation
+          if (data.position) {
+            this.state.player.position = {
+              x: data.position.x,
+              y: data.position.y,
+              z: data.position.z
+            };
+          }
+          if (data.rotation) {
+            this.state.player.rotation = {
+              x: data.rotation.x,
+              y: data.rotation.y,
+              z: data.rotation.z
+            };
+          }
+          break;
+        default:
+          console.log('Unknown message type:', data.type);
+      }
     } catch (err) {
-        console.error('Invalid message from client:', err);
+      console.error('Invalid message from client:', err);
     }
-}
+  }
 
   sendUpdate() {
     if (this.client.readyState === WebSocket.OPEN) {
