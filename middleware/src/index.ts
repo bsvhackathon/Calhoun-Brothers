@@ -29,7 +29,6 @@ app.use(bodyParser.json({ limit: '64mb' }))
 
 // This middleware sets CORS headers.
 app.use((req: ExpressRequest, res: Response, next: NextFunction) => {
-    console.log('test')
   res.header('Access-Control-Allow-Origin', '*')
   res.header('Access-Control-Allow-Headers', '*')
   res.header('Access-Control-Allow-Methods', '*')
@@ -67,8 +66,8 @@ async function init() {
   app.use(createAuthMiddleware({
     wallet,
     allowUnauthenticated: false,
-    logger: console,
-    logLevel: 'debug'
+    // logger: console,
+    // logLevel: 'debug'
   }))
 
   // Setup the payment middleware.
@@ -84,6 +83,8 @@ async function init() {
   // ---------------------------------------------------------------------------
 
   app.get('/test', async (req: AuthRequest, res: Response) => {
+    console.log((req as any).payment)
+    console.log((req as any).auth)
     const test = { "message": "Hello World" }
     res.json(test)
     return
