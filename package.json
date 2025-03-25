@@ -4,16 +4,19 @@
   "private": true,
   "workspaces": [
     "frontend",
-    "backend"
+    "backend",
+    "middleware"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\" \"npm run dev:middleware\"",
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:backend": "npm run dev --workspace=backend",
+    "dev:middleware": "npm run dev --workspace=middleware",
     "build": "npm run build --workspaces",
-    "start": "concurrently \"npm run start:frontend\" \"npm run start:backend\"",
+    "start": "concurrently \"npm run start:frontend\" \"npm run start:backend\" \"npm run start:middleware\"",
     "start:frontend": "npm run preview --workspace=frontend",
-    "start:backend": "npm run start --workspace=backend"
+    "start:backend": "npm run start --workspace=backend",
+    "start:middleware": "npm run start --workspace=middleware"
   },
   "devDependencies": {
     "@types/three": "^0.174.0",

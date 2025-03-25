@@ -472,6 +472,8 @@ export class GameClient {
       if (startButton.disabled) {
         return;
       }
+
+
       
       // PAY HERE
       // Check if we already have a wallet connection, if not try to connect
@@ -501,7 +503,20 @@ export class GameClient {
           console.error('[ERROR] Failed to retrieve wallet data:', error);
           return; // Don't proceed if wallet connection fails
         }
+      } else {
+
+        const test2 = await this.wallet.getVersion();
+        console.log(test2);
+        
+        const client = await new AuthFetch(this.wallet);
+       // Fetch weather stats using AuthFetch.
+        const response = await client.fetch('http://localhost:3002/test', {
+          method: 'GET'
+        })
+        const data = await response.json()
+        console.log('Result:', data)
       }
+
 
       if (await this.wallet?.isAuthenticated()) {
         this.setupWebSocket();
