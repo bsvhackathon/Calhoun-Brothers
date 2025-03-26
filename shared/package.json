@@ -1,0 +1,17 @@
+{
+  "name": "mongo-tools",
+  "version": "1.0.0",
+  "description": "Shared Mongoose tools for backend and middleware",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w"
+  },
+  "dependencies": {
+    "mongoose": "^7.6.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+} 
