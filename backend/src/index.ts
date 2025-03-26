@@ -3,18 +3,50 @@ import cors from 'cors';
 import { WebSocketServer } from 'ws';
 import http from 'http';
 import WebSocket from 'ws';
+import jwt from 'jsonwebtoken';
+import url from 'url';
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load environment variables from .env file
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 const port = process.env.PORT || 3001;
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // Create HTTP server
 const server = http.createServer(app);
 
 // Create WebSocket server
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ 
+  server,
+  verifyClient: (info, callback) => {
+    // Parse URL and extract token
+    const { query } = url.parse(info.req.url || '', true);
+    const token = query.token;
+    
+    if (!token) {
+      callback(false, 401, 'Unauthorized: No token provided');
+      return;
+    }
+
+    try {
+      // Verify JWT token
+      const decoded = jwt.verify(token as string, JWT_SECRET!);
+      // Attach user data to the request object for later use
+      (info.req as any).decoded_token = decoded;
+      callback(true);
+    } catch (err) {
+      console.error('JWT verification failed:', err);
+      callback(false, 401, 'Unauthorized: Invalid token');
+    }
+  }
+});
 
 export class GameSession {
   private client: WebSocket;
+  private userToken: any; // Store the decoded token for this session
   private state: {
     score: number;
     isGameOver: boolean;
@@ -36,6 +68,7 @@ export class GameSession {
 
   constructor(client: WebSocket) {
     this.client = client; // WebSocket connection for this session
+    this.userToken = (client as any).decodedToken; // Store the token from the client
     this.state = {
       score: 0,
       isGameOver: false,
@@ -342,20 +375,27 @@ const gameServer = new GameServer();
 gameServer.startGameLoop();
 
 // WebSocket connection handling
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
   console.log('New client connected');
-  const session = gameServer.addSession(ws);
-
+  // Attach decoded token directly to the WebSocket object
+  (ws as any).decodedToken = (req as any).decoded_token;
+  // Create game session after token is attached
+  gameServer.addSession(ws);
+  
   ws.on('message', (message) => {
+    // Use the token attached to this specific WebSocket instance
+    // console.log((ws as any).decodedToken);
     gameServer.handleClientMessage(ws, message.toString());
   });
 
   ws.on('close', () => {
+    // console.log((ws as any).decodedToken);
     gameServer.removeSession(ws);
     console.log('Client disconnected');
   });
 
   ws.on('error', (err) => {
+    // console.log((ws as any).decodedToken);
     console.error('WebSocket error:', err);
     gameServer.removeSession(ws);
   });

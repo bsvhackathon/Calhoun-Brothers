@@ -1,4 +1,3 @@
-
 import * as THREE from 'three';
 
 import {
@@ -38,6 +37,7 @@ export class GameClient {
   private playerHorizontalSpeed: number;
   private wallet: WalletClient | null; // Add wallet property
   private connectButton: HTMLButtonElement | null; // Add connect button property
+  private token: string | null = null; // Add token property
   
   constructor() {
     this.ws = null;
@@ -61,8 +61,14 @@ export class GameClient {
     this.connectButton = null; // Initialize connect button property
   }
 
+  // Add setToken method
+  setToken(token: string) {
+    this.token = token;
+    console.log('Token set:', token);
+  }
+
   setupWebSocket() {
-    this.ws = new WebSocket('ws://localhost:3001'); // Match backend port
+    this.ws = new WebSocket(`ws://localhost:3001?token=${this.token}`); // Match backend port
     this.ws.onopen = () => console.log('Connected to server');
     this.ws.onmessage = (event) => {
       // console.log(event)
@@ -514,11 +520,12 @@ export class GameClient {
           method: 'GET'
         })
         const data = await response.json()
+        this.setToken(data.token);
         console.log('Result:', data)
       }
 
 
-      if (await this.wallet?.isAuthenticated()) {
+      if (await this.wallet?.isAuthenticated() && this.token) {
         this.setupWebSocket();
         this.startGame();
         startButton.remove(); // Remove the button after starting
