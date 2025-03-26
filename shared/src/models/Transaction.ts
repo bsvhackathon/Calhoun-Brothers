@@ -3,6 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 // Define the interface for a Transaction document
 export interface ITransaction extends Document {
   tx: string;
+  sessionId: string;
   satoshisPaid: number;
   accepted: Boolean;
   identity: Schema.Types.ObjectId;
@@ -16,6 +17,12 @@ export interface ITransaction extends Document {
 const TransactionSchema = new Schema<ITransaction>(
   {
     tx: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+    sessionId: {
       type: String,
       required: true,
       unique: true,

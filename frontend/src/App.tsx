@@ -510,7 +510,7 @@ export class GameClient {
         
         const client = await new AuthFetch(this.wallet);
        // Fetch weather stats using AuthFetch.
-        const response = await client.fetch('http://localhost:3002/test', {
+        const response = await client.fetch('http://localhost:3002/pay', {
           method: 'GET'
         })
         const data = await response.json()
