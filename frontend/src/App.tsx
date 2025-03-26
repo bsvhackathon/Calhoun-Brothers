@@ -64,7 +64,7 @@ export class GameClient {
   // Add setToken method
   setToken(token: string) {
     this.token = token;
-    console.log('Token set:', token);
+    // console.log('Token set:', token);
   }
 
   setupWebSocket() {
@@ -300,7 +300,7 @@ export class GameClient {
     startPrompt.style.fontSize = '24px';
     startPrompt.style.textAlign = 'center';
     startPrompt.style.zIndex = '1000';
-    startPrompt.innerHTML = 'Game paused. Click START button to continue.';
+    // startPrompt.innerHTML = 'Game paused. Click START button to continue.';
     document.getElementById('gameContainer')!.appendChild(startPrompt);
 
     if (!document.getElementById('scoreValue')) {
@@ -319,7 +319,7 @@ export class GameClient {
     this.createConnectButton();
     
     // Create the start button outside of the game container
-    this.createStartButton();
+    this.createStartButton(true);
   }
 
   // Add new method to create connect button
@@ -359,7 +359,7 @@ export class GameClient {
         
         // Check if authenticated and get wallet info
         const isAuthenticated = await this.wallet.isAuthenticated();
-        console.log('Wallet authenticated:', isAuthenticated);
+        // console.log('Wallet authenticated:', isAuthenticated);
         
         if (isAuthenticated) {
           // Update button text to indicate connected state
@@ -370,14 +370,14 @@ export class GameClient {
           const publicKey = await this.wallet.getPublicKey({
             identityKey: true
           });
-          console.log('Public key:', publicKey);
+          // console.log('Public key:', publicKey);
           
           const version = await this.wallet.getVersion();
-          console.log('Wallet version:', version);
+          // console.log('Wallet version:', version);
           
           // Create auth fetch instance
           const client = await new AuthFetch(this.wallet);
-          console.log('Auth client initialized:', client);
+          // console.log('Auth client initialized:', client);
           
           // Enable the start button now that wallet is connected
           const startButton = document.getElementById('startGameButton') as HTMLButtonElement;
@@ -422,7 +422,7 @@ export class GameClient {
     this.connectButton = connectButton;
   }
 
-  createStartButton() {
+  createStartButton(disabled: boolean) {
     const startButton = document.createElement('button');
     startButton.id = 'startGameButton';
     startButton.innerText = 'Insert Coins';
@@ -436,11 +436,19 @@ export class GameClient {
     startButton.style.color = 'white';
     startButton.style.border = 'none';
     startButton.style.borderRadius = '8px';
-    startButton.style.cursor = 'not-allowed'; // Show not-allowed cursor when disabled
+    if (disabled) {
+      startButton.style.cursor = 'not-allowed'; // Show not-allowed cursor when disabled
+    } else {
+      startButton.style.cursor = 'pointer'; // Show pointer cursor when enabled
+    }
     startButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.3)';
     startButton.style.zIndex = '2000'; // Ensure it's above the game container
-    startButton.style.opacity = '0.5'; // Make it look disabled
-    startButton.disabled = true; // Actually disable the button
+    if (disabled) {
+      startButton.style.opacity = '0.5'; // Make it look disabled
+    } else {
+      startButton.style.opacity = '1'; // Make it look enabled
+    }
+    startButton.disabled = disabled; // Actually disable the button
     startButton.title = 'Connect wallet first to enable'; // Add tooltip
     
     // Create instruction text above the button
@@ -487,18 +495,18 @@ export class GameClient {
         try {
           // Create the wallet client and AuthFetch instance.
           this.wallet = await new WalletClient('json-api', 'localhost');
-          console.log(await this.wallet.isAuthenticated());
+          // console.log(await this.wallet.isAuthenticated());
           const test = await this.wallet.getPublicKey({
             identityKey: true
           });
-          console.log(test);
+          // console.log(test);
 
           const test2 = await this.wallet.getVersion();
-          console.log(test2);
+          // console.log(test2);
           
           const client = await new AuthFetch(this.wallet);
-          console.log(this.wallet);
-          console.log(client);
+          // console.log(this.wallet);
+          // console.log(client);
           
           // Update connect button if it exists
           if (this.connectButton) {
@@ -512,7 +520,7 @@ export class GameClient {
       } else {
 
         const test2 = await this.wallet.getVersion();
-        console.log(test2);
+        // console.log(test2);
         
         const client = await new AuthFetch(this.wallet);
        // Fetch weather stats using AuthFetch.
@@ -521,7 +529,7 @@ export class GameClient {
         })
         const data = await response.json()
         this.setToken(data.token);
-        console.log('Result:', data)
+        // console.log('Result:', data)
       }
 
 
@@ -539,6 +547,7 @@ export class GameClient {
   startGame() {
     if (!this.isUnlocked) {
       // Remove blur and enable interaction
+      // console.log(this.gameContainer);
       if (this.gameContainer) {
         this.gameContainer.style.filter = 'none';
         this.gameContainer.style.pointerEvents = 'auto';
@@ -637,11 +646,69 @@ export class GameClient {
     gameOverDiv.innerHTML = `
                 <h2>Game Over!</h2>
                 <p>Score: ${Math.floor(this.score)}</p>
-                <button onclick="location.reload()" style="padding: 10px 20px; margin-top: 10px; cursor: pointer;">
+                <button id="playAgainButton" style="padding: 10px 20px; margin-top: 10px; cursor: pointer;">
                     Play Again
                 </button>
             `;
     document.body.appendChild(gameOverDiv);
+    
+    // Add click event to the button (instead of using inline onclick)
+    document.getElementById('playAgainButton')?.addEventListener('click', () => {
+      // Remove game over screen
+      gameOverDiv.remove();
+      
+      // Reset game state to constructor values
+      this.isGameOver = false;
+      this.gameStarted = false;
+      this.isUnlocked = false;
+      this.score = 0;
+      this.speed = 60;
+      this.worldWidth = 60; 
+      this.lastUpdateTime = 0;
+      this.playerHorizontalSpeed = 0.7;
+      this.keys = { left: false, right: false };
+      this.lastFrameTime = 0;
+      this.deltaTime = 0;
+      
+      // Clear obstacles
+      this.obstacles.forEach(obstacle => {
+        this.scene!.remove(obstacle);
+      });
+      this.obstacles = [];
+      this.obstacleVelocities.clear();
+      this.serverObstaclePositions.clear();
+      
+      // Reset player position
+      if (this.player) {
+        this.player.position.set(0, -0.5, 5);
+        this.player.rotation.x = -Math.PI / 2;
+        this.player.rotation.z = 0;
+      }
+      
+      // Reset bounding box
+      this.playerBoundingBox = new THREE.Box3();
+      if (this.player) {
+        this.playerBoundingBox.setFromObject(this.player);
+      }
+      
+      // Apply blur to the game container
+      if (this.gameContainer) {
+        this.gameContainer.style.filter = 'blur(5px)';
+        this.gameContainer.style.pointerEvents = 'none';
+      }
+      
+      // Create a new start button to insert coins
+      this.createStartButton(false);
+      
+      // Close any existing WebSocket connection
+      if (this.ws) {
+        this.ws.close();
+        this.ws = null;
+      }
+      
+      // Reset token
+      this.token = null;
+    });
   }
 
   animate() {

@@ -7,9 +7,23 @@ import jwt from 'jsonwebtoken';
 import url from 'url';
 import dotenv from 'dotenv';
 import path from 'path';
+import { Transaction, IIdentity, connectToDatabase } from 'shared-models';
+import mongoose from 'mongoose';
 
 // Load environment variables from .env file
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+// Connect to MongoDB
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/bsv-app';
+(async () => {
+  try {
+    await connectToDatabase(MONGODB_URI);
+    console.log('Backend connected to MongoDB successfully!');
+  } catch (error) {
+    console.error('Backend failed to connect to MongoDB:', error);
+    process.exit(1); // Exit with error if database connection fails
+  }
+})();
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -64,7 +78,6 @@ export class GameSession {
     };
     movement: { left: boolean; right: boolean }; // Track movement state  
   };
-  private lastUpdateTime: number;
 
   constructor(client: WebSocket) {
     this.client = client; // WebSocket connection for this session
@@ -86,7 +99,6 @@ export class GameSession {
       },
       movement: { left: false, right: false } // Initialize movement state
     };
-    this.lastUpdateTime = Date.now();
   }
 
   createObstacle(x: number, z: number) {
@@ -268,8 +280,43 @@ export class GameSession {
     // Check collisions
     this.checkCollisions();
 
+    // Update MongoDB transaction once per second or when game is over
+    this.updateGameStateInDB();
+
     // Send update to this session's client
     this.sendUpdate();
+  }
+
+  async updateGameStateInDB() {
+    try {
+      // Find the transaction with appropriate validation
+      const transaction = await Transaction.findOne({
+        sessionId: this.userToken.sessionId,
+      }).populate<{ identity: IIdentity }>('identity');
+      
+      // If no transaction found or identity key doesn't match, this is unauthorized
+      if (!transaction) {
+        console.error(`Transaction validation failed: Transaction not found for sessionId ${this.userToken.sessionId}`);
+        return;
+      }
+      
+      if (transaction.identity.identityKey !== this.userToken.identityKey) {
+        console.error(`Transaction validation failed: Identity mismatch for sessionId ${this.userToken.sessionId}`);
+        return;
+      }
+      
+      // If validation passes, update the transaction
+      await Transaction.findByIdAndUpdate(transaction._id, {
+        gameScore: Math.floor(this.state.score),
+        gameOver: this.state.isGameOver,
+        gameStarted: this.state.gameStarted
+      });
+    } catch (err) {
+      console.error('Error updating transaction:', err);
+      // Don't retry immediately, but log the error
+      // We'll let future game updates attempt to update the DB
+      // This prevents overwhelming the database with retry attempts
+    }
   }
 
   handleMessage(message: string) {
@@ -278,6 +325,7 @@ export class GameSession {
       switch (data.type) {
         case 'start':
           this.state.gameStarted = true;
+          this.updateGameStateInDB();
           this.sendUpdate(); // Send initial state immediately
           break;
         case 'playerUpdate':
@@ -315,6 +363,13 @@ export class GameSession {
         speed: this.state.speed
       }));
       this.state.newObstacles = [];
+    }
+  }
+
+  setGameOver() {
+    if (this.state.gameStarted) { 
+      this.state.isGameOver = true;
+      this.updateGameStateInDB();
     }
   }
 }
@@ -358,6 +413,15 @@ class GameServer {
   removeSession(client: WebSocket) {
     this.sessions.delete(client);
   }
+  
+  handleClientDisconnect(client: WebSocket) {
+    const session = this.sessions.get(client);
+    if (session) {
+      // Set game over and update DB before removing the session
+      session.setGameOver();
+    }
+    this.removeSession(client);
+  }
 
   handleClientMessage(client: WebSocket, message: string) {
     const session = this.sessions.get(client);
@@ -389,8 +453,7 @@ wss.on('connection', (ws, req) => {
   });
 
   ws.on('close', () => {
-    // console.log((ws as any).decodedToken);
-    gameServer.removeSession(ws);
+    gameServer.handleClientDisconnect(ws);
     console.log('Client disconnected');
   });
 
