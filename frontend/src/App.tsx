@@ -4,6 +4,7 @@ import {
   AuthFetch,
   WalletClient,
 } from '@bsv/sdk'
+import config from './config';
 
 interface ServerObstacle {
   x: number;
@@ -38,6 +39,8 @@ export class GameClient {
   private wallet: WalletClient | null; // Add wallet property
   private connectButton: HTMLButtonElement | null; // Add connect button property
   private token: string | null = null; // Add token property
+  private credits: number = 0; // Add credits property
+  private creditsDisplay: HTMLDivElement | null = null; // Add credits display property
   
   constructor() {
     this.ws = null;
@@ -59,6 +62,8 @@ export class GameClient {
     this.playerHorizontalSpeed = 0.7;
     this.wallet = null; // Initialize wallet property
     this.connectButton = null; // Initialize connect button property
+    this.credits = 0; // Initialize credits
+    this.creditsDisplay = null; // Initialize credits display
   }
 
   // Add setToken method
@@ -67,8 +72,57 @@ export class GameClient {
     // console.log('Token set:', token);
   }
 
+  // Add method to fetch user credits
+  async fetchCredits() {
+    try {
+      if (this.wallet && await this.wallet.isAuthenticated()) {
+        this.credits = 0;
+        this.updateCreditsDisplay();
+        return this.credits;
+      }
+      return 0;
+    } catch (error) {
+      console.error('[ERROR] Failed to fetch credits:', error);
+      return 0;
+    }
+  }
+  
+  // Add method to update credits display
+  updateCreditsDisplay() {
+    if (this.creditsDisplay) {
+      this.creditsDisplay.textContent = `Credits: ${this.credits}`;
+    }
+  }
+
+  // Add new method to create credits display
+  createCreditsDisplay() {
+    // Don't create if it already exists
+    if (document.getElementById('creditsDisplay')) {
+      this.creditsDisplay = document.getElementById('creditsDisplay') as HTMLDivElement;
+      return;
+    }
+    
+    const creditsDisplay = document.createElement('div');
+    creditsDisplay.id = 'creditsDisplay';
+    creditsDisplay.textContent = `Credits: ${this.credits}`;
+    creditsDisplay.style.position = 'fixed';
+    creditsDisplay.style.bottom = '50px';
+    creditsDisplay.style.right = '20px';
+    creditsDisplay.style.padding = '15px 25px';
+    creditsDisplay.style.fontSize = '20px';
+    creditsDisplay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    creditsDisplay.style.color = '#ffcc00'; // Gold color for credits
+    creditsDisplay.style.border = '2px solid #ffcc00';
+    creditsDisplay.style.borderRadius = '8px';
+    creditsDisplay.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.3)';
+    creditsDisplay.style.zIndex = '2000'; // Same z-index as other UI elements
+    creditsDisplay.style.fontWeight = 'bold';
+    document.body.appendChild(creditsDisplay);
+    this.creditsDisplay = creditsDisplay;
+  }
+
   setupWebSocket() {
-    this.ws = new WebSocket(`ws://localhost:3001?token=${this.token}`); // Match backend port
+    this.ws = new WebSocket(`${config.WEBSOCKET_URL}?token=${this.token}`);
     this.ws.onopen = () => console.log('Connected to server');
     this.ws.onmessage = (event) => {
       // console.log(event)
@@ -89,6 +143,12 @@ export class GameClient {
     this.playerHorizontalSpeed = data.horizontalSpeed;
     if (data.obstacles) {
       this.createObstacles(data.obstacles);
+    }
+
+    // Update credits if included in server data
+    if (data.credits !== undefined) {
+      this.credits = data.credits;
+      this.updateCreditsDisplay();
     }
 
     this.isGameOver = data.isGameOver || false;
@@ -318,6 +378,9 @@ export class GameClient {
     // Create the connect button in the top right
     this.createConnectButton();
     
+    // Create credits display before start button
+    this.createCreditsDisplay();
+    
     // Create the start button outside of the game container
     this.createStartButton(true);
   }
@@ -365,19 +428,10 @@ export class GameClient {
           // Update button text to indicate connected state
           connectButton.innerText = 'Wallet Connected';
           connectButton.style.backgroundColor = '#00cc66';
-          
-          // Get wallet details
-          const publicKey = await this.wallet.getPublicKey({
-            identityKey: true
-          });
-          // console.log('Public key:', publicKey);
-          
-          const version = await this.wallet.getVersion();
-          // console.log('Wallet version:', version);
-          
-          // Create auth fetch instance
-          const client = await new AuthFetch(this.wallet);
           // console.log('Auth client initialized:', client);
+          
+          // Fetch and display user credits
+          await this.fetchCredits();
           
           // Enable the start button now that wallet is connected
           const startButton = document.getElementById('startGameButton') as HTMLButtonElement;
@@ -465,6 +519,9 @@ export class GameClient {
     instructionText.innerHTML = 'Step 1: Connect wallet in top right<br>Step 2: Insert coins to play';
     document.body.appendChild(instructionText);
     
+    // Create credits display (moved to separate method)
+    this.createCreditsDisplay();
+    
     // Hover effect - only applied when button is enabled
     startButton.addEventListener('mouseover', () => {
       if (!startButton.disabled) {
@@ -487,8 +544,6 @@ export class GameClient {
         return;
       }
 
-
-      
       // PAY HERE
       // Check if we already have a wallet connection, if not try to connect
       if (!this.wallet) {
@@ -496,17 +551,12 @@ export class GameClient {
           // Create the wallet client and AuthFetch instance.
           this.wallet = await new WalletClient('json-api', 'localhost');
           // console.log(await this.wallet.isAuthenticated());
-          const test = await this.wallet.getPublicKey({
+          await this.wallet.getPublicKey({
             identityKey: true
           });
-          // console.log(test);
-
-          const test2 = await this.wallet.getVersion();
-          // console.log(test2);
           
-          const client = await new AuthFetch(this.wallet);
-          // console.log(this.wallet);
-          // console.log(client);
+          // Fetch user credits after connecting wallet
+          await this.fetchCredits();
           
           // Update connect button if it exists
           if (this.connectButton) {
@@ -518,18 +568,27 @@ export class GameClient {
           return; // Don't proceed if wallet connection fails
         }
       } else {
-
-        const test2 = await this.wallet.getVersion();
-        // console.log(test2);
         
         const client = await new AuthFetch(this.wallet);
-       // Fetch weather stats using AuthFetch.
-        const response = await client.fetch('http://localhost:3002/pay', {
+        
+        // Fetch current credits before payment
+        await this.fetchCredits();
+        
+        // Make payment
+        const response = await client.fetch(`${config.PAYMENT_API_URL}/pay`, {
           method: 'GET'
         })
         const data = await response.json()
         this.setToken(data.token);
-        // console.log('Result:', data)
+        
+        // Update credits after payment
+        if (data.credits !== undefined) {
+          this.credits = data.credits;
+          this.updateCreditsDisplay();
+        } else {
+          // If server didn't return updated credits, fetch them again
+          await this.fetchCredits();
+        }
       }
 
 
@@ -538,6 +597,8 @@ export class GameClient {
         this.startGame();
         startButton.remove(); // Remove the button after starting
         instructionText.remove(); // Also remove the instruction text
+        
+        // No longer removing the credits display when game starts
       }
     });
     

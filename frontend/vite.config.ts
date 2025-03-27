@@ -12,7 +12,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/ws': {
-        target: 'ws://localhost:3001',
+        target: process.env.WEBSOCKET_URL || 'ws://localhost:3001',
         ws: true,
       },
     },
