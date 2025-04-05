@@ -145,13 +145,7 @@ const Lottery: React.FC = () => {
               ))}
             </div>
             <div className="queue-status">
-              {state.currentQueue.length > 0 ? (
-                <button className="draw-button" onClick={handleDraw}>
-                  DRAW WINNER
-                </button>
-              ) : (
-                <p>Queue is empty</p>
-              )}
+              {state.currentQueue.length === 0 && <p>Queue is empty</p>}
             </div>
           </div>
 
