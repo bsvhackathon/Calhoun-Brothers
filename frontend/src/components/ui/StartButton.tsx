@@ -146,7 +146,7 @@ export class StartButton {
     this.button.style.opacity = '1';
     this.button.style.cursor = 'pointer';
     this.button.title = 'Click to start the game';
-    this.instructionText.innerHTML = 'Step 1: ✅ Wallet Connected<br>Step 2: Click Insert Coins to play';
+    // this.instructionText.innerHTML = 'Step 1: ✅ Wallet Connected<br>Step 2: Click Insert Coins to play';
     this.instructionText.style.color = '#00cc66'; // Green to indicate progress
   }
 
