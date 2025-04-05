@@ -73,7 +73,7 @@ export class GameClient {
 
     this.gameContainer = document.createElement('div');
     this.gameContainer.id = 'gameContainer';
-    this.gameContainer.style.position = 'fixed';
+    this.gameContainer.style.position = 'absolute';
     this.gameContainer.style.top = '50%';
     this.gameContainer.style.left = '50%';
     this.gameContainer.style.transform = 'translate(-50%, -50%)';
@@ -85,8 +85,13 @@ export class GameClient {
     this.gameContainer.style.overflow = 'hidden';
     this.gameContainer.style.filter = 'blur(5px)';
     this.gameContainer.style.pointerEvents = 'none';
-    document.body.appendChild(this.gameContainer);
-    this.gameContainer.appendChild(this.renderer.domElement);
+    
+    // Find the game container in the DOM
+    const container = document.querySelector('.game-container');
+    if (container) {
+      container.appendChild(this.gameContainer);
+      this.gameContainer.appendChild(this.renderer.domElement);
+    }
   }
 
   private initializeComponents() {
