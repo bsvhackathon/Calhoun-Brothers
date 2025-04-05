@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",
+    "mongo-tools": "^1.0.0",
     "three": "^0.174.0",
     "vite": "^6.2.2"
   }

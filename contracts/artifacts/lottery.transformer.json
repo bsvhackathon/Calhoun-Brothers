@@ -1,0 +1,10 @@
+{
+  "success": true,
+  "errors": [],
+  "scryptfile": "lottery.scrypt",
+  "sourceMapFile": "lottery.scrypt.map",
+  "ctxMethods": [
+    "fund",
+    "draw"
+  ]
+}
