@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken';
 import url from 'url';
 import dotenv from 'dotenv';
 import path from 'path';
-import { Transaction, IIdentity, connectToDatabase, Lottery, Identity} from 'shared-models';
+import { Transaction, IIdentity, connectToDatabase, Lottery, Identity } from 'shared-models';
 import mongoose from 'mongoose';
 
 // Load environment variables from .env file
@@ -33,13 +33,13 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const server = http.createServer(app);
 
 // Create WebSocket server
-const wss = new WebSocketServer({ 
+const wss = new WebSocketServer({
   server,
   verifyClient: (info, callback) => {
     // Parse URL and extract token
     const { query } = url.parse(info.req.url || '', true);
     const token = query.token;
-    
+
     if (!token) {
       callback(false, 401, 'Unauthorized: No token provided');
       return;
@@ -293,18 +293,18 @@ export class GameSession {
       const transaction = await Transaction.findOne({
         sessionId: this.userToken.sessionId,
       }).populate<{ identity: IIdentity }>('identity');
-      
+
       // If no transaction found or identity key doesn't match, this is unauthorized
       if (!transaction) {
         console.error(`Transaction validation failed: Transaction not found for sessionId ${this.userToken.sessionId}`);
         return;
       }
-      
+
       if (transaction.identity.identityKey !== this.userToken.identityKey) {
         console.error(`Transaction validation failed: Identity mismatch for sessionId ${this.userToken.sessionId}`);
         return;
       }
-      
+
       // If validation passes, update the transaction
       await Transaction.findByIdAndUpdate(transaction._id, {
         gameScore: Math.floor(this.state.score),
@@ -367,7 +367,7 @@ export class GameSession {
   }
 
   setGameOver() {
-    if (this.state.gameStarted) { 
+    if (this.state.gameStarted) {
       this.state.isGameOver = true;
       this.updateGameStateInDB();
     }
@@ -413,7 +413,7 @@ class GameServer {
   removeSession(client: WebSocket) {
     this.sessions.delete(client);
   }
-  
+
   handleClientDisconnect(client: WebSocket) {
     const session = this.sessions.get(client);
     if (session) {
@@ -445,7 +445,7 @@ wss.on('connection', (ws, req) => {
   (ws as any).decodedToken = (req as any).decoded_token;
   // Create game session after token is attached
   gameServer.addSession(ws);
-  
+
   ws.on('message', (message) => {
     // Use the token attached to this specific WebSocket instance
     // console.log((ws as any).decodedToken);
@@ -468,10 +468,50 @@ app.get('/', (req: Request, res: Response) => {
   res.json({ message: 'Welcome to the API' });
 });
 
+app.get('/lotteries', async (req: Request, res: Response) => {
+  const lotteries = await Lottery.find({}).exec();
+  res.json(lotteries);
+});
+
+app.get('/completed-lotteries', async (req: Request, res: Response) => {
+  const completedLotteries = await Lottery.find({ winningIdentityKey: { $ne: null } }).exec();
+  res.json(completedLotteries);
+});
+
+app.get('/unfinished-lotteries', async (req: Request, res: Response) => {
+  const unfinishedLotteries = await Lottery.find({ winningIdentityKey: null }).exec();
+  res.json(unfinishedLotteries);
+});
+
+app.get('/leaderboard', async (req: Request, res: Response) => {
+  const leaderboard = await Transaction
+    .find({})
+    .sort({ gameScore: -1 }) // Sort descending (highest first)
+    .limit(10)
+    .select('identity gameScore createdAt') // Select relevant fields
+    .populate<{ identity: { publicKey: string; identityKey: string } }>('identity', 'publicKey identityKey')
+    .exec();
+
+  if (leaderboard.length === 0) {
+    console.log('No transactions found for leaderboard.');
+    return res.status(200).json([]); // Return empty array with 200 status
+  }
+
+  const formattedLeaderboard = leaderboard.map((entry, index) => ({
+    rank: index + 1,
+    identityKey: entry.identity?.identityKey || 'Unknown',
+    publicKey: entry.identity?.publicKey || 'Unknown',
+    score: entry.gameScore,
+    date: entry.createdAt
+  }));
+
+  res.status(200).json(formattedLeaderboard);
+});
+
 // Use server.listen instead of app.listen
 server.listen(port, () => {
   console.log(`Server is running on port ${port}`);
-}); 
+});
 
 
 async function assignTransactionsToLotteries() {

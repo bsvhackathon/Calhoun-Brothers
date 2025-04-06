@@ -251,13 +251,20 @@ async function getUndrawnLotteriesDetails() {
 
             // Extract data for deployLottery
             const pubKeys: PubKey[] = [
-                ownerPubKey,
-                ...transactions.slice(0, 5).map(tx => 
+                ...transactions.map(tx => 
                     PubKey(tx.identity?.publicKey || 'Unknown')
                 )
             ];
+            
+            const identityKeys: PubKey[] = [
+                ...transactions.map(tx => 
+                    PubKey(tx.identity?.identityKey || 'Unknown')
+                )
+            ];
 
-            const nonces: bigint[] = transactions.slice(0, 5).map(tx => 
+            console.log(identityKeys)
+
+            const nonces: bigint[] = transactions.map(tx => 
                 BigInt(tx.nonce || '0') // Convert nonce to bigint, default to 0 if missing
             );
 
@@ -268,9 +275,11 @@ async function getUndrawnLotteriesDetails() {
             }
             const winnerIndex = Number(sum % BigInt(5));
             const winnerPubKey = pubKeys[winnerIndex];
+            const winnerIdentityKey = identityKeys[winnerIndex];
             console.log(`\nPredicted winner for lottery ${lottery.lotteryId}:`);
             console.log(`  Winner index: ${winnerIndex}`);
             console.log(`  Winner public key: ${winnerPubKey.toString()}`);
+            console.log(`  Winner identity key: ${winnerIdentityKey.toString()}`);
 
             const details = transactions.map(tx => ({
                 nonce: tx.nonce || 'N/A',
@@ -292,7 +301,7 @@ async function getUndrawnLotteriesDetails() {
                 await Lottery.updateOne(
                     { _id: lottery._id },
                     { 
-                        winningIdentityKey: winnerPubKey.toString(), // Convert PubKey to string
+                        winningIdentityKey: winnerIdentityKey.toString(), // Convert PubKey to string
                         deployTxId: result.deployTxId,
                         fundTxId: result.fundTxId,
                         drawTxId: result.drawTxId
