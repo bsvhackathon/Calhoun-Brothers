@@ -7,6 +7,7 @@ export const config = {
     
     // Payment API URL with fallback
     PAYMENT_API_URL: import.meta.env.VITE_PAYMENT_API_URL || 'http://localhost:3002',
+    API_URL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
   };
   
   export default config; 

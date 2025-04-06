@@ -483,6 +483,13 @@ app.get('/unfinished-lotteries', async (req: Request, res: Response) => {
   res.json(unfinishedLotteries);
 });
 
+app.get('/queue', async (req: Request, res: Response) => {
+  const queue = await Transaction.find({ lottery: null })
+  .populate('identity') // Populate identity without field restriction
+  .exec();
+  res.json(queue);
+});
+
 app.get('/leaderboard', async (req: Request, res: Response) => {
   const leaderboard = await Transaction
     .find({})

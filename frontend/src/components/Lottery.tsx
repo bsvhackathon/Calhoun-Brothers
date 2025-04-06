@@ -1,14 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { LotteryService, PastLottery } from '../services/LotteryService';
 import './Lottery.css';
-
-interface PastLottery {
-  id: number;
-  date: string;
-  participants: number;
-  winner: string;
-  prize: number;
-}
 
 interface LotteryState {
   pastLotteries: PastLottery[];
@@ -20,6 +13,7 @@ interface LotteryState {
 
 const Lottery: React.FC = () => {
   const navigate = useNavigate();
+  const lotteryService = new LotteryService();
   const [state, setState] = useState<LotteryState>({
     pastLotteries: [],
     currentQueue: [],
@@ -28,63 +22,38 @@ const Lottery: React.FC = () => {
     isWheelSpinning: false,
   });
 
+  const formatAddress = (address: string): string => {
+    if (!address) return '';
+    return `${address.slice(0, 4)}...${address.slice(-4)}`;
+  };
+
+  const formatDate = (dateString: string): string => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   useEffect(() => {
-    // Mock data for demonstration
-    const mockPastLotteries: PastLottery[] = [
-      {
-        id: 1,
-        date: '2024-03-15',
-        participants: 10,
-        winner: '034e...0617',
-        prize: 1000,
-      },
-      {
-        id: 2,
-        date: '2024-03-14',
-        participants: 8,
-        winner: '1a2b...3c4d',
-        prize: 800,
-      },
-      {
-        id: 3,
-        date: '2024-03-13',
-        participants: 12,
-        winner: '5e6f...7g8h',
-        prize: 1200,
-      },
-    ];
+    const fetchLotteries = async () => {
+      const [completedLotteries, currentQueue, upcomingLotteries] = await Promise.all([
+        lotteryService.getCompletedLotteries(),
+        lotteryService.getCurrentQueue(),
+        lotteryService.getUpcomingLotteries()
+      ]);
+      
+      setState(prev => ({
+        ...prev,
+        pastLotteries: completedLotteries,
+        currentQueue: currentQueue,
+        upcomingLotteries: upcomingLotteries
+      }));
+    };
 
-    const mockUpcomingLotteries: PastLottery[] = [
-      {
-        id: 4,
-        date: '2024-03-16',
-        participants: 15,
-        winner: '',
-        prize: 1500,
-      },
-      {
-        id: 5,
-        date: '2024-03-17',
-        participants: 0,
-        winner: '',
-        prize: 0,
-      },
-    ];
-
-    const mockCurrentQueue = [
-      '034e...0617',
-      '1a2b...3c4d',
-      '5e6f...7g8h',
-      '9i0j...1k2l',
-      '3m4n...5o6p',
-    ];
-
-    setState(prev => ({
-      ...prev,
-      pastLotteries: mockPastLotteries,
-      currentQueue: mockCurrentQueue,
-      upcomingLotteries: mockUpcomingLotteries,
-    }));
+    fetchLotteries();
   }, []);
 
   const handleDraw = () => {
@@ -137,10 +106,10 @@ const Lottery: React.FC = () => {
           <div className="queue-section">
             <h2>CURRENT QUEUE</h2>
             <div className="queue-slots">
-              {state.currentQueue.map((player, index) => (
+              {state.currentQueue.map((player: any, index) => (
                 <div key={index} className="queue-slot">
                   <span className="slot-number">Slot {index + 1}</span>
-                  <span className="slot-player">{player}</span>
+                  <span className="slot-player">{formatAddress(player?.identity?.identityKey)}</span>
                 </div>
               ))}
             </div>
@@ -153,12 +122,12 @@ const Lottery: React.FC = () => {
           <div className="upcoming-lotteries-section">
             <h2>UPCOMING LOTTERIES</h2>
             <div className="lottery-list">
-              {state.upcomingLotteries.map(lottery => (
-                <div key={lottery.id} className="lottery-card">
+              {state.upcomingLotteries.map((lottery: any, index) => (
+                <div key={index} className="lottery-card">
                   <div className="lottery-info">
-                    <span>Date: {lottery.date}</span>
-                    <span>Participants: {lottery.participants}</span>
-                    <span>Prize: {lottery.prize} BSV</span>
+                  <span>Date: {formatDate(lottery.createdAt)}</span>
+                    <span>Participants: 10</span>
+                    <span>Prize: 10 sats</span>
                   </div>
                   <button
                     className="view-button"
@@ -175,13 +144,13 @@ const Lottery: React.FC = () => {
           <div className="past-lotteries-section">
             <h2>PAST LOTTERIES</h2>
             <div className="lottery-list">
-              {state.pastLotteries.map(lottery => (
-                <div key={lottery.id} className="lottery-card">
+              {state.pastLotteries.map((lottery: any, index) => (
+                <div key={index} className="lottery-card">
                   <div className="lottery-info">
-                    <span>Date: {lottery.date}</span>
-                    <span>Participants: {lottery.participants}</span>
-                    <span>Winner: {lottery.winner}</span>
-                    <span>Prize: {lottery.prize} BSV</span>
+                    <span>Date: {formatDate(lottery.createdAt)}</span>
+                    <span>Participants: 10</span>
+                    <span>Winner: {formatAddress(lottery?.winningIdentityKey)}</span>
+                    <span>Prize: 10 sats</span>
                   </div>
                   <button
                     className="view-button"

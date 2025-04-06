@@ -25,6 +25,7 @@
     "concurrently": "^8.2.2"
   },
   "dependencies": {
+    "@bsv/wallet-toolbox-client": "^1.2.35",
     "@vitejs/plugin-react": "^4.3.4",
     "mongo-tools": "^1.0.0",
     "three": "^0.174.0",
