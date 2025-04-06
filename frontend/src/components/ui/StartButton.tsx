@@ -50,17 +50,17 @@ export class StartButton {
       bottom: '50px',
       left: '50%',
       transform: 'translateX(-50%)',
-      padding: '15px 40px',
-      fontSize: '24px',
-      backgroundColor: '#00aaff',
-      color: 'white',
-      border: 'none',
+      padding: '0.5rem 1rem',
+      fontSize: '0.8rem',
+      backgroundColor: 'transparent',
+      color: '#00ff00',
+      border: '2px solid #00ff00',
       borderRadius: '8px',
+      cursor: 'pointer',
       boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
       zIndex: '2000',
-      opacity: '0.5', // Disabled look
-      cursor: 'not-allowed',
-      transition: 'background-color 0.2s, transform 0.2s, opacity 0.2s',
+      transition: 'all 0.3s',
+      fontFamily: "'Press Start 2P', cursive",
     });
   }
 
@@ -87,14 +87,14 @@ export class StartButton {
     // Hover effects (only when enabled)
     this.button.addEventListener('mouseover', () => {
       if (!this.button.disabled) {
-        this.button.style.backgroundColor = '#0088cc';
+        this.button.style.backgroundColor = 'rgba(0, 255, 0, 0.2)';
         this.button.style.transform = 'translateX(-50%) scale(1.05)';
       }
     });
 
     this.button.addEventListener('mouseout', () => {
       if (!this.button.disabled) {
-        this.button.style.backgroundColor = '#00aaff';
+        this.button.style.backgroundColor = 'transparent';
         this.button.style.transform = 'translateX(-50%)';
       }
     });

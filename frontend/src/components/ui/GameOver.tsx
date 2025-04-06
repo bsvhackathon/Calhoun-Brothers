@@ -55,12 +55,13 @@ export class GameOver {
             padding: '10px 20px',
             marginTop: '10px',
             fontSize: '16px',
-            backgroundColor: '#00aaff',
-            color: 'white',
-            border: 'none',
+            backgroundColor: 'transparent',
+            color: '#00ff00',
+            border: '2px solid #00ff00',
             borderRadius: '5px',
             cursor: 'pointer',
-            transition: 'background-color 0.2s, transform 0.2s',
+            transition: 'all 0.3s',
+            fontFamily: "'Press Start 2P', cursive",
         });
     }
 
@@ -70,12 +71,12 @@ export class GameOver {
      */
     private setupEventListeners(onPlayAgain: () => void): void {
         this.playAgainButton.addEventListener('mouseover', () => {
-            this.playAgainButton.style.backgroundColor = '#0088cc';
+            this.playAgainButton.style.backgroundColor = 'rgba(0, 255, 0, 0.2)';
             this.playAgainButton.style.transform = 'scale(1.05)';
         });
 
         this.playAgainButton.addEventListener('mouseout', () => {
-            this.playAgainButton.style.backgroundColor = '#00aaff';
+            this.playAgainButton.style.backgroundColor = 'transparent';
             this.playAgainButton.style.transform = 'scale(1)';
         });
 
