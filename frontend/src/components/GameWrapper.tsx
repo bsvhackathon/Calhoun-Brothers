@@ -1,10 +1,12 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { GameClient } from '../core/GameClient';
+import ScoreDisplay from './ui/ScoreDisplay';
 import './GameWrapper.css';
 
 const GameWrapper: React.FC = () => {
   const gameContainerRef = useRef<HTMLDivElement>(null);
   const gameClientRef = useRef<GameClient | null>(null);
+  const [score, setScore] = useState(0);
 
   const cleanupGameElements = () => {
     // Remove the game container from the DOM
@@ -55,6 +57,20 @@ const GameWrapper: React.FC = () => {
     };
   }, []);
 
+  // Separate useEffect for score updates
+  useEffect(() => {
+    const scoreInterval = setInterval(() => {
+      if (gameClientRef.current) {
+        const currentScore = gameClientRef.current.getScore();
+        setScore(currentScore);
+      }
+    }, 200);
+
+    return () => {
+      clearInterval(scoreInterval);
+    };
+  }, []); // Empty dependency array since we only need to set this up once
+
   const handleBack = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -70,6 +86,7 @@ const GameWrapper: React.FC = () => {
       >
         ← BACK
       </button>
+      <ScoreDisplay score={score} />
       <div 
         ref={gameContainerRef} 
         style={{ 

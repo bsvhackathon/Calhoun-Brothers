@@ -1,0 +1,22 @@
+.score-display {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 10px 20px;
+  border-radius: 5px;
+  color: white;
+  font-family: 'Arial', sans-serif;
+  font-size: 18px;
+  z-index: 1000;
+}
+
+.score-label {
+  margin-right: 10px;
+  color: #888;
+}
+
+.score-value {
+  font-weight: bold;
+  color: #fff;
+} 

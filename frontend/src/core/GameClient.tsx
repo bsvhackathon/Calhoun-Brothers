@@ -203,6 +203,11 @@ export class GameClient {
     }
 
     this.obstacles.forEach(obstacle => obstacle.update(this.speed, this.deltaTime));
+    
+    // Increment score based on time survived
+    if (this.gameStarted && !this.isGameOver) {
+      this.score += Math.floor(this.deltaTime * 10);
+    }
   }
 
   private showGameOver() {
@@ -232,5 +237,9 @@ export class GameClient {
       this.gameContainer.style.filter = 'blur(5px)';
       this.gameContainer.style.pointerEvents = 'none';
     }
+  }
+
+  public getScore(): number {
+    return this.score;
   }
 }
