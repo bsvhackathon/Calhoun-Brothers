@@ -1,0 +1,28 @@
+{
+    "schema": "chain-arcade",
+    "schemaVersion": "1.0",
+    "frontend": {
+      "language": "react",
+      "sourceDirectory": "./frontend"
+    },
+    "backend": {
+      "language": "node",
+      "sourceDirectory": "./backend"
+    },
+    "middleware": {
+      "language": "node",
+      "sourceDirectory": "./middleware"
+    },
+    "contracts": {
+      "language": "sCrypt",
+      "baseDirectory": "./contracts"
+    },
+    "configs": [
+      {
+        "name": "Local LARS",
+        "network": "mainnet",
+        "provider": "LARS",
+        "run": ["backend", "frontend", "middleware"]
+      }
+    ]
+  }

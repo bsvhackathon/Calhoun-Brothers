@@ -11,6 +11,17 @@ interface LotteryState {
   isWheelSpinning: boolean;
 }
 
+interface PastLottery {
+  id: number;
+  date: string;
+  participants: number;
+  winner: string;
+  prize: number;
+  transactions: any[];
+  winningIdentityKey: string;
+  createdAt: string;
+}
+
 const Lottery: React.FC = () => {
   const navigate = useNavigate();
   const lotteryService = new LotteryService();
@@ -33,7 +44,9 @@ const Lottery: React.FC = () => {
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -45,9 +58,14 @@ const Lottery: React.FC = () => {
         lotteryService.getUpcomingLotteries()
       ]);
       
+      // Sort completed lotteries by date in descending order (most recent first)
+      const sortedCompletedLotteries = [...completedLotteries].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
       setState(prev => ({
         ...prev,
-        pastLotteries: completedLotteries,
+        pastLotteries: sortedCompletedLotteries,
         currentQueue: currentQueue,
         upcomingLotteries: upcomingLotteries
       }));
@@ -72,6 +90,7 @@ const Lottery: React.FC = () => {
         prize: state.currentQueue.length * 100,
         transactions: [],
         winningIdentityKey: winner,
+        createdAt: new Date().toISOString(),
       };
 
       setState(prev => ({
