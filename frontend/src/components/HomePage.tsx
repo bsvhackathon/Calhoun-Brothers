@@ -11,6 +11,7 @@ const HomePage: React.FC = () => {
   const [wallet, setWallet] = useState<WalletClient | null>(null);
   const [balance, setBalance] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isImporting, setIsImporting] = useState<boolean>(false);
 
   const handlePlayGame = () => {
     navigate('/game');
@@ -51,6 +52,7 @@ const HomePage: React.FC = () => {
 
   const handleHelloLog = async () => {
     let reference: string;
+    setIsImporting(true);
     try {
       const wocNet = 'main';
       const UTXOResponse = await fetch(
@@ -112,10 +114,10 @@ const HomePage: React.FC = () => {
       // Broadcast signatures back to the wallet
       try {
         const res = await wallet?.signAction(signActionArgs);
-        debugger
+        // debugger
         console.log(res);
       } catch (e) {
-        debugger
+        // debugger
         console.log(e);
       }
 
@@ -126,6 +128,8 @@ const HomePage: React.FC = () => {
       console.error(e)
       const message = `Import failed: ${(e as any).message || 'unknown error'}`;
       alert(message);
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -186,8 +190,9 @@ const HomePage: React.FC = () => {
             <button 
               className="small-button"
               onClick={handleHelloLog}
+              disabled={isImporting}
             >
-              Import Money
+              {isImporting ? 'Importing...' : 'Import Money'}
             </button>
           </div>
           {address && (
