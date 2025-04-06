@@ -1,11 +1,19 @@
 import config from '../config/config';
 
 export interface PastLottery {
+  _id?: string;
   id: number;
   date: string;
   participants: number;
   winner: string;
   prize: number;
+  transactions: Array<{
+    identity: string;
+    gameScore: number;
+    createdAt: string;
+    nonce: string;
+  }>;
+  winningIdentityKey: string;
 }
 
 export class LotteryService {

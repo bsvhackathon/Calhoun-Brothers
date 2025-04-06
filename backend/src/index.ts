@@ -475,7 +475,19 @@ app.get('/lotteries', async (req: Request, res: Response) => {
 
 app.get('/completed-lotteries', async (req: Request, res: Response) => {
   const completedLotteries = await Lottery.find({ winningIdentityKey: { $ne: null } }).exec();
-  res.json(completedLotteries);
+  
+  // Get transactions for each lottery
+  const lotteriesWithTransactions = await Promise.all(
+    completedLotteries.map(async (lottery) => {
+      const transactions = await Transaction.find({ lottery: lottery._id }).exec();
+      return {
+        ...lottery.toObject(),
+        transactions
+      };
+    })
+  );
+  
+  res.json(lotteriesWithTransactions);
 });
 
 app.get('/unfinished-lotteries', async (req: Request, res: Response) => {

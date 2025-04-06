@@ -70,6 +70,8 @@ const Lottery: React.FC = () => {
         participants: state.currentQueue.length,
         winner,
         prize: state.currentQueue.length * 100,
+        transactions: [],
+        winningIdentityKey: winner,
       };
 
       setState(prev => ({
@@ -78,10 +80,11 @@ const Lottery: React.FC = () => {
         currentQueue: [],
         isWheelSpinning: false,
       }));
-    }, 5000);
+    }, 3000);
   };
 
   const handleViewLottery = (lottery: PastLottery) => {
+  console.log(lottery);
     setState(prev => ({ ...prev, selectedLottery: lottery }));
   };
 
@@ -171,31 +174,37 @@ const Lottery: React.FC = () => {
               <button className="close-button" onClick={handleCloseModal}>
                 CLOSE
               </button>
-              <h2>Lottery #{state.selectedLottery.id}</h2>
+              <h2>Lottery #{state.selectedLottery._id}</h2>
               <div className="modal-details">
                 <div className="participants-list">
                   <h3>Participants</h3>
-                  {Array.from({ length: state.selectedLottery.participants }).map((_, index) => (
+                  {state.selectedLottery?.transactions?.map((tx, index) => (
                     <div key={index} className="participant">
-                      Player {index + 1}
+                      <div>Identity: {formatAddress(tx.identity)}</div>
+                      <div>Score: {tx.gameScore}</div>
+                      <div>Date: {formatDate(tx.createdAt)}</div>
+                      <div className="nonce-display">
+                        <span>Nonce: </span>
+                        <span className="nonce-value">{tx.nonce}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
                 <div className="wheel-container">
                   <div className="wheel-pointer" />
                   <div className={`wheel ${state.isWheelSpinning ? 'spinning' : ''}`}>
-                    {Array.from({ length: state.selectedLottery?.participants || 0 }).map((_, index) => {
-                      const winnerIndex = state.selectedLottery?.winner ? 
-                        state.selectedLottery.winner.split('...')[0] : null;
+                    {Array.from({ length: state.selectedLottery?.transactions?.length || 0 }).map((_, index) => {
+                      const winnerIndex = state.selectedLottery?.winningIdentityKey ? 
+                        state.selectedLottery.winningIdentityKey : null;
                       const isWinner = winnerIndex && 
-                        state.currentQueue.findIndex(addr => addr.startsWith(winnerIndex)) === index;
+                        state.selectedLottery?.transactions?.findIndex(tx => tx.identity === winnerIndex) === index;
                       
                       return (
                         <div
                           key={index}
                           className={`wheel-segment ${isWinner ? 'winner' : ''}`}
                           style={{
-                            transform: `rotate(${(360 / (state.selectedLottery?.participants || 1)) * index}deg)`,
+                            transform: `rotate(${(360 / (state.selectedLottery?.transactions?.length || 1)) * index}deg)`,
                           }}
                         >
                           {index + 1}

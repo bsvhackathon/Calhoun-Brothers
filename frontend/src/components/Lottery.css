@@ -240,11 +240,30 @@
 }
 
 .participant {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   padding: 0.5rem;
-  margin-bottom: 0.5rem;
   background-color: rgba(0, 255, 0, 0.1);
   border: 1px solid #00ff00;
   border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.nonce-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.nonce-value {
+  word-break: break-all;
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: #00ff00;
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 0.25rem;
+  border-radius: 2px;
 }
 
 /* Wheel Styles */
