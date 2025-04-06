@@ -80,8 +80,9 @@ export class GameClient {
     this.gameContainer.style.width = '1200px';
     this.gameContainer.style.height = '675px';
     this.gameContainer.style.backgroundColor = '#000';
-    this.gameContainer.style.border = '2px solid #333';
+    this.gameContainer.style.border = '2px solid #00ff00';
     this.gameContainer.style.borderRadius = '10px';
+    this.gameContainer.style.boxShadow = '0 0 10px #00ff00, inset 0 0 10px #00ff00';
     this.gameContainer.style.overflow = 'hidden';
     this.gameContainer.style.filter = 'blur(5px)';
     this.gameContainer.style.pointerEvents = 'none';

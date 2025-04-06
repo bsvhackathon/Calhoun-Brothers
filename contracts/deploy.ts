@@ -262,7 +262,7 @@ async function getUndrawnLotteriesDetails() {
                 )
             ];
 
-            console.log(identityKeys)
+            // console.log(identityKeys)
 
             const nonces: bigint[] = transactions.map(tx => 
                 BigInt(tx.nonce || '0') // Convert nonce to bigint, default to 0 if missing
@@ -286,10 +286,10 @@ async function getUndrawnLotteriesDetails() {
                 identityKey: tx.identity?.publicKey || 'Unknown',
             }));
 
-            console.log(`\nLottery ${lottery.lotteryId}:`);
-            details.forEach((detail, index) => {
-                console.log(`  ${index + 1}. Nonce: ${detail.nonce}, IdentityKey: ${detail.identityKey}`);
-            });
+            // console.log(`\nLottery ${lottery.lotteryId}:`);
+            // details.forEach((detail, index) => {
+            //     console.log(`  ${index + 1}. Nonce: ${detail.nonce}, IdentityKey: ${detail.identityKey}`);
+            // });
 
             // Call deployLottery with the extracted data
             try {

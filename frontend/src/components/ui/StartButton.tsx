@@ -5,7 +5,7 @@ import { CreditsDisplay } from './CreditsDisplay';
 
 export class StartButton {
   private button: HTMLButtonElement;
-  private instructionText: HTMLDivElement;
+  // private instructionText: HTMLDivElement;
   private wallet: WalletService;
   private creditsDisplay: CreditsDisplay;
   private onStart: (token: string) => void;
@@ -24,17 +24,17 @@ export class StartButton {
     this.applyButtonStyles();
 
     // Create instruction text
-    this.instructionText = document.createElement('div');
-    this.instructionText.id = 'gameInstructions';
-    this.instructionText.innerHTML = 'Step 1: Connect wallet in top right<br>Step 2: Insert coins to play';
-    this.applyInstructionStyles();
+    // this.instructionText = document.createElement('div');
+    // this.instructionText.id = 'gameInstructions';
+    // this.instructionText.innerHTML = 'Step 1: Connect wallet in top right<br>Step 2: Insert coins to play';
+    // this.applyInstructionStyles();
 
     if (isUnlocked) {
       this.enable();
     }
 
     // Append to DOM
-    document.body.appendChild(this.instructionText);
+    // document.body.appendChild(this.instructionText);
     document.body.appendChild(this.button);
 
     // Setup event listeners
@@ -67,18 +67,18 @@ export class StartButton {
   /**
    * Applies styles to the instruction text.
    */
-  private applyInstructionStyles(): void {
-    Object.assign(this.instructionText.style, {
-      position: 'fixed',
-      bottom: '110px',
-      left: '50%',
-      transform: 'translateX(-50%)',
-      color: '#ff9900', // Orange to indicate action needed
-      fontSize: '18px',
-      textAlign: 'center',
-      zIndex: '2000',
-    });
-  }
+  // private applyInstructionStyles(): void {
+  //   Object.assign(this.instructionText.style, {
+  //     position: 'fixed',
+  //     bottom: '110px',
+  //     left: '50%',
+  //     transform: 'translateX(-50%)',
+  //     color: '#ff9900', // Orange to indicate action needed
+  //     fontSize: '18px',
+  //     textAlign: 'center',
+  //     zIndex: '2000',
+  //   });
+  // }
 
   /**
    * Sets up event listeners for hover and click interactions.
@@ -147,7 +147,7 @@ export class StartButton {
     this.button.style.cursor = 'pointer';
     this.button.title = 'Click to start the game';
     // this.instructionText.innerHTML = 'Step 1: ✅ Wallet Connected<br>Step 2: Click Insert Coins to play';
-    this.instructionText.style.color = '#00cc66'; // Green to indicate progress
+    // this.instructionText.style.color = '#00cc66'; // Green to indicate progress
   }
 
   /**
@@ -155,6 +155,6 @@ export class StartButton {
    */
   remove(): void {
     this.button.remove();
-    this.instructionText.remove();
+    // this.instructionText.remove();
   }
 }

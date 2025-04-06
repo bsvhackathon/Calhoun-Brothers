@@ -13,8 +13,8 @@ export class Obstacle {
     // Create obstacle geometry and material
     const obstacleGeometry = new THREE.BoxGeometry(size, size, size);
     const obstacleMaterial = new THREE.MeshPhongMaterial({
-      color: 0xff0000,
-      emissive: 0xff0000,
+      color: 0x00ff00,
+      emissive: 0x00ff00,
       emissiveIntensity: 0.5,
       transparent: true,
       opacity: 0.9,
@@ -34,8 +34,8 @@ export class Obstacle {
   createObstacles(data: ServerObstacle) {
     const obstacleGeometry = new THREE.BoxGeometry(data.size, data.size, data.size);
     const obstacleMaterial = new THREE.MeshPhongMaterial({
-      color: 0xff0000,
-      emissive: 0xff0000,
+      color: 0x00ff00,
+      emissive: 0x00ff00,
       emissiveIntensity: 0.5,
       transparent: true,
       opacity: 0.9,
