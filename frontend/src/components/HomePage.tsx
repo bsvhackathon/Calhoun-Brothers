@@ -13,6 +13,10 @@ const HomePage: React.FC = () => {
     navigate('/leaderboard');
   };
 
+  const handleLottery = () => {
+    navigate('/lottery');
+  };
+
   return (
     <div className="arcade-container">
       <div className="arcade-screen">
@@ -31,6 +35,12 @@ const HomePage: React.FC = () => {
               onClick={handleLeaderboard}
             >
               LEADERBOARD
+            </button>
+            <button 
+              className="arcade-button"
+              onClick={handleLottery}
+            >
+              LOTTERY
             </button>
           </div>
         </div>

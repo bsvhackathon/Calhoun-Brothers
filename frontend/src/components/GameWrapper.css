@@ -7,24 +7,21 @@
 
 .back-button {
   position: fixed;
-  top: 20px;
-  left: 20px;
+  top: 1rem;
+  left: 1rem;
   z-index: 9999;
-  background-color: #0f0;
-  color: #000;
-  border: none;
+  background-color: transparent;
+  color: #00ff00;
+  border: 2px solid #00ff00;
   padding: 0.5rem 1rem;
   font-family: 'Press Start 2P', cursive;
   font-size: 0.8rem;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
-  pointer-events: auto;
+  transition: all 0.3s;
 }
 
 .back-button:hover {
-  background-color: #00ff00;
-  box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+  background-color: rgba(0, 255, 0, 0.2);
   transform: scale(1.05);
 }
 
