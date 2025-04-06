@@ -249,52 +249,52 @@
 
 /* Wheel Styles */
 .wheel-container {
-  flex: 2;
   position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  width: 300px;
+  height: 300px;
+  margin: 0 auto;
 }
 
 .wheel {
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
   position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
   border: 4px solid #00ff00;
   overflow: hidden;
+  transition: transform 5s cubic-bezier(0.17, 0.67, 0.83, 0.67);
 }
 
 .wheel-segment {
   position: absolute;
-  width: 100%;
-  height: 100%;
+  width: 50%;
+  height: 50%;
+  transform-origin: 100% 100%;
   display: flex;
-  justify-content: center;
   align-items: center;
-  transform-origin: 50% 50%;
-  background-color: rgba(0, 255, 0, 0.1);
+  justify-content: center;
+  background: rgba(0, 255, 0, 0.1);
   border: 1px solid #00ff00;
-  font-size: 0.8rem;
-  text-align: center;
-  padding: 0 1rem;
+  color: #00ff00;
+  font-size: 1.2rem;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
 }
 
 .wheel-segment.winner {
-  background-color: rgba(255, 0, 0, 0.2);
-  color: #ff0000;
+  background: rgba(0, 255, 0, 0.3);
+  box-shadow: 0 0 10px #00ff00;
 }
 
 .wheel.spinning {
-  animation: spin 5s cubic-bezier(0.1, 0.7, 1.0, 0.1);
+  animation: spin 5s cubic-bezier(0.17, 0.67, 0.83, 0.67);
 }
 
 @keyframes spin {
-  0% {
+  from {
     transform: rotate(0deg);
   }
-  100% {
-    transform: rotate(3600deg);
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -307,7 +307,8 @@
   height: 0;
   border-left: 15px solid transparent;
   border-right: 15px solid transparent;
-  border-top: 30px solid #00ff00;
+  border-bottom: 30px solid #00ff00;
+  z-index: 10;
 }
 
 .close-button {

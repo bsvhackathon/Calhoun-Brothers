@@ -215,19 +215,24 @@ const Lottery: React.FC = () => {
                 <div className="wheel-container">
                   <div className="wheel-pointer" />
                   <div className={`wheel ${state.isWheelSpinning ? 'spinning' : ''}`}>
-                    {Array.from({ length: state.selectedLottery?.participants || 0 }).map((_, index) => (
-                      <div
-                        key={index}
-                        className={`wheel-segment ${
-                          index === 0 ? 'winner' : ''
-                        }`}
-                        style={{
-                          transform: `rotate(${(360 / (state.selectedLottery?.participants || 1)) * index}deg)`,
-                        }}
-                      >
-                        {index === 0 ? state.selectedLottery?.winner : `Player ${index + 1}`}
-                      </div>
-                    ))}
+                    {Array.from({ length: state.selectedLottery?.participants || 0 }).map((_, index) => {
+                      const winnerIndex = state.selectedLottery?.winner ? 
+                        state.selectedLottery.winner.split('...')[0] : null;
+                      const isWinner = winnerIndex && 
+                        state.currentQueue.findIndex(addr => addr.startsWith(winnerIndex)) === index;
+                      
+                      return (
+                        <div
+                          key={index}
+                          className={`wheel-segment ${isWinner ? 'winner' : ''}`}
+                          style={{
+                            transform: `rotate(${(360 / (state.selectedLottery?.participants || 1)) * index}deg)`,
+                          }}
+                        >
+                          {index + 1}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
