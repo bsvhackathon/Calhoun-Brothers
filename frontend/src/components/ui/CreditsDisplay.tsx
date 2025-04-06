@@ -20,15 +20,16 @@ export class CreditsDisplay {
         position: 'fixed',
         bottom: '50px',
         right: '20px',
-        padding: '15px 25px',
-        fontSize: '20px',
+        padding: '0.5rem 1rem',
+        fontSize: '0.8rem',
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        color: '#ffcc00', // Gold color for credits
-        border: '2px solid #ffcc00',
+        color: '#00ff00',
+        border: '2px solid #00ff00',
         borderRadius: '8px',
         boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
         zIndex: '2000',
         fontWeight: 'bold',
+        fontFamily: "'Press Start 2P', cursive",
       });
     }
   

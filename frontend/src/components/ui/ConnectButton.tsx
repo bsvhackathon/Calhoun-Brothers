@@ -28,16 +28,17 @@ export class ConnectButton {
       position: 'fixed',
       top: '20px',
       right: '20px',
-      padding: '10px 20px',
-      fontSize: '16px',
-      backgroundColor: '#00aaff',
-      color: 'white',
-      border: 'none',
+      padding: '0.5rem 1rem',
+      fontSize: '0.8rem',
+      backgroundColor: 'transparent',
+      color: '#00ff00',
+      border: '2px solid #00ff00',
       borderRadius: '8px',
       cursor: 'pointer',
       boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
       zIndex: '2500',
-      transition: 'background-color 0.2s, transform 0.2s', // Smooth transitions
+      transition: 'all 0.3s',
+      fontFamily: "'Press Start 2P', cursive",
     });
   }
 
@@ -47,12 +48,12 @@ export class ConnectButton {
   private setupEventListeners(): void {
     // Hover effects
     this.button.addEventListener('mouseover', () => {
-      this.button.style.backgroundColor = '#0088cc';
+      this.button.style.backgroundColor = 'rgba(0, 255, 0, 0.2)';
       this.button.style.transform = 'scale(1.05)';
     });
 
     this.button.addEventListener('mouseout', () => {
-      this.button.style.backgroundColor = this.button.innerText === 'Wallet Connected' ? '#00cc66' : '#00aaff';
+      this.button.style.backgroundColor = this.button.innerText === 'Wallet Connected' ? 'rgba(0, 255, 0, 0.2)' : 'transparent';
       this.button.style.transform = 'scale(1)';
     });
 
