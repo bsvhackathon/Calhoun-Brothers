@@ -148,7 +148,7 @@ const Lottery: React.FC = () => {
                 <div key={index} className="lottery-card">
                   <div className="lottery-info">
                   <span>Date: {formatDate(lottery.createdAt)}</span>
-                    <span>Participants: 10</span>
+                    <span>Participants: 5</span>
                     <span>Prize: 10 sats</span>
                   </div>
                   <button
@@ -170,7 +170,7 @@ const Lottery: React.FC = () => {
                 <div key={index} className="lottery-card">
                   <div className="lottery-info">
                     <span>Date: {formatDate(lottery.createdAt)}</span>
-                    <span>Participants: 10</span>
+                    <span>Participants: 5</span>
                     <span>Winner: {formatAddress(lottery?.winningIdentityKey)}</span>
                     <span>Prize: 10 sats</span>
                   </div>
