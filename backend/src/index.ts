@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken';
 import url from 'url';
 import dotenv from 'dotenv';
 import path from 'path';
-import { Transaction, IIdentity, connectToDatabase } from 'shared-models';
+import { Transaction, IIdentity, connectToDatabase, Lottery, Identity} from 'shared-models';
 import mongoose from 'mongoose';
 
 // Load environment variables from .env file
@@ -472,3 +472,119 @@ app.get('/', (req: Request, res: Response) => {
 server.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 }); 
+
+
+async function assignTransactionsToLotteries() {
+  try {
+    // Step 1: Find all transactions without a lottery assigned
+    const unassignedTransactions = await Transaction.find({ lottery: null })
+      .populate('identity') // Optional: populate identity if needed for logging
+      .exec();
+
+    if (unassignedTransactions.length === 0) {
+      console.log('No transactions without a lottery found.');
+      return;
+    }
+
+    console.log(`Found ${unassignedTransactions.length} unassigned transactions.`);
+
+    // Step 2: Process transactions in batches of 5
+    const batchSize = 5;
+    let processedCount = 0;
+
+    for (let i = 0; i < unassignedTransactions.length; i += batchSize) {
+      const batch = unassignedTransactions.slice(i, i + batchSize);
+
+      // If batch has less than 5 transactions, leave them in the queue
+      if (batch.length < batchSize) {
+        console.log(`Leaving ${batch.length} transactions in the queue (less than 5).`);
+        break;
+      }
+
+      // Step 3: Create a new lottery for this batch
+      const lotteryId = `LOTTERY_${Date.now()}_${processedCount}`; // Unique lotteryId
+      const lottery = await Lottery.create({ lotteryId });
+
+      // Step 4: Assign the batch of 5 transactions to the new lottery
+      const transactionIds = batch.map(tx => tx._id);
+      await Transaction.updateMany(
+        { _id: { $in: transactionIds } },
+        { lottery: lottery._id }
+      );
+
+      processedCount += batch.length;
+      console.log(`Assigned ${batch.length} transactions to ${lotteryId}`);
+    }
+
+    // Step 5: Report any leftovers
+    const leftovers = unassignedTransactions.length - processedCount;
+    if (leftovers > 0) {
+      console.log(`${leftovers} transactions remain in the queue.`);
+    } else {
+      console.log('All transactions have been assigned to lotteries.');
+    }
+  } catch (error) {
+    console.error('Error assigning transactions to lotteries:', error);
+  } finally {
+    // Optionally close the connection if this is a standalone script
+    // await mongoose.connection.close();
+  }
+}
+
+async function getUndrawnLotteriesDetails() {
+  try {
+    // Step 1: Find all lotteries that have not been drawn (winningIdentityKey is null)
+    const undrawnLotteries = await Lottery.find({ winningIdentityKey: null }).exec();
+
+    if (undrawnLotteries.length === 0) {
+      console.log('No undrawn lotteries found.');
+      return;
+    }
+
+    console.log(`Found ${undrawnLotteries.length} undrawn lotteries.`);
+
+    // Step 2: For each lottery, get associated transactions and their details
+    for (const lottery of undrawnLotteries) {
+      const transactions = await Transaction.find({ lottery: lottery._id })
+        .populate<{ identity: { publicKey: string; identityKey: string } }>('identity', 'publicKey identityKey')
+        .exec();
+
+      if (transactions.length === 0) {
+        console.log(`Lottery ${lottery.lotteryId}: No transactions found.`);
+        continue;
+      }
+
+      // Step 3: Extract nonce and identityKey for each transaction
+      const details = transactions.map(tx => ({
+        nonce: tx.nonce || 'N/A', // Handle case where nonce might be undefined
+        identityKey: tx.identity ? tx.identity : 'Unknown', // Safely access identityKey
+      }));
+
+      // Log the results for this lottery
+      console.log(`\nLottery ${lottery.lotteryId}:`);
+      details.forEach((detail, index) => {
+        console.log(`  ${index + 1}. Nonce: ${detail.nonce}, IdentityKey: ${detail.identityKey}`);
+      });
+
+      // THIS IS WHERE IT WOULD GOOOOO
+    }
+  } catch (error) {
+    console.error('Error retrieving undrawn lotteries:', error);
+  }
+}
+
+const intervalTime = 5000;
+
+const run = async () => {
+  console.log('Running assignTransactionsToLotteries...');
+  try {
+    await assignTransactionsToLotteries();
+    await getUndrawnLotteriesDetails();
+  } catch (err) {
+    console.error('Error:', err);
+  } finally {
+    setTimeout(run, intervalTime);
+  }
+};
+
+// run();

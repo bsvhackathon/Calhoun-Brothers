@@ -2,57 +2,45 @@ struct __scrypt_ts_Change {  int amount;  Ripemd160 address;}
 
 contract Lottery {
   PubKey owner;
-  @state PubKey[2] participants;
-  @state Sha256[2] nonceHashes;
+  @state PubKey[5] participants;
+  @state Sha256[5] nonceHashes;
   @state int totalAmount;
   @state bool isOver;
   bytes __scrypt_ts_ctx_hashoutputs;
-  int __scrypt_ts_ctx_value;
   __scrypt_ts_Change __scrypt_ts_change;
-  constructor(PubKey owner, PubKey[2] participants, Sha256[2] nonceHashes) {
+  constructor(PubKey owner, PubKey[5] participants, Sha256[5] nonceHashes) {
     this.owner = owner;
     this.participants = participants;
     this.nonceHashes = nonceHashes;
     this.totalAmount = 0;
     this.isOver = false;
   }
-  static function generateNonce(bytes randomBytes) : Sha256 {
-    return sha256(randomBytes);
-  }
-  public function fund(Sig sig, SigHashPreimage __scrypt_ts_txPreimage, int __scrypt_ts_changeAmount, Ripemd160 __scrypt_ts_changeAddress) {
+  public function fund(Sig sig, int amount, SigHashPreimage __scrypt_ts_txPreimage, int __scrypt_ts_changeAmount, Ripemd160 __scrypt_ts_changeAddress) {
     require(Tx.checkPreimageSigHashType(__scrypt_ts_txPreimage, SigHashType(b'41')));
     this.__scrypt_ts_ctx_hashoutputs = SigHash.hashOutputs(__scrypt_ts_txPreimage);
-    this.__scrypt_ts_ctx_value = SigHash.value(__scrypt_ts_txPreimage);
     this.__scrypt_ts_change = {__scrypt_ts_changeAmount, __scrypt_ts_changeAddress};
     require(!this.isOver);
     require(checkSig(sig, this.owner));
-    
-    
-    
-    
-    require(this.__scrypt_ts_ctx_value == 10);
-    this.totalAmount = 10;
-    bytes output = this.buildChangeOutput() + this.buildStateOutput(1);
-    Sha256 hashOutputs = hash256(output);
-    
-    
-    require(this.__scrypt_ts_ctx_hashoutputs == hashOutputs);
+    this.totalAmount = amount;
+    bytes output = this.buildStateOutput(this.totalAmount) + this.buildChangeOutput();
+    require(this.__scrypt_ts_ctx_hashoutputs == hash256(output));
   }
-  public function draw(int[2] nonce, Sig sig, SigHashPreimage __scrypt_ts_txPreimage) {
+  public function draw(int[5] nonce, Sig sig, SigHashPreimage __scrypt_ts_txPreimage, int __scrypt_ts_changeAmount, Ripemd160 __scrypt_ts_changeAddress) {
     require(Tx.checkPreimageSigHashType(__scrypt_ts_txPreimage, SigHashType(b'41')));
     this.__scrypt_ts_ctx_hashoutputs = SigHash.hashOutputs(__scrypt_ts_txPreimage);
-    this.__scrypt_ts_ctx_value = SigHash.value(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_change = {__scrypt_ts_changeAmount, __scrypt_ts_changeAddress};
     require(checkSig(sig, this.owner));
     require(!this.isOver);
     require(this.totalAmount > 0);
     this.isOver = true;
     int sum = 0;
-    loop (2) : i {
-        require(hash256(pack(nonce[i])) == this.nonceHashes[i]);
+    loop (5) : i {
+        require(sha256(pack(nonce[i])) == this.nonceHashes[i]);
         sum += nonce[i];
       }
-    PubKey winner = this.participants[(sum % (2))];
-    bytes outputs = Utils.buildOutput(Utils.buildPublicKeyHashScript(hash160(winner)), this.totalAmount);
+    PubKey winner = this.participants[(sum % (5))];
+    
+    bytes outputs = Utils.buildOutput(Utils.buildPublicKeyHashScript(hash160(winner)), this.totalAmount) + this.buildChangeOutput();
     require(this.__scrypt_ts_ctx_hashoutputs == hash256(outputs));
   }
   function buildStateOutput(int amount) : bytes {  return Utils.buildOutput(this.getStateScript(), amount);}

@@ -28,10 +28,10 @@ export class Lottery extends SmartContract {
     owner: PubKey // Contract owner
 
     @prop(true)
-    participants: FixedArray<PubKey, 2> // List of participant public keys
+    participants: FixedArray<PubKey, 5> // List of participant public keys
 
     @prop(true)
-    nonceHashes: FixedArray<Sha256, 2> // List of nonce hashes
+    nonceHashes: FixedArray<Sha256, 5> // List of nonce hashes
 
     @prop(true)
     totalAmount: bigint // Track total amount from all participants
@@ -41,8 +41,8 @@ export class Lottery extends SmartContract {
 
     constructor(
         owner: PubKey,
-        participants: FixedArray<PubKey, 2>,
-        nonceHashes: FixedArray<Sha256, 2>
+        participants: FixedArray<PubKey, 5>,
+        nonceHashes: FixedArray<Sha256, 5>
     ) {
         super(...arguments)
         this.owner = owner
@@ -74,7 +74,7 @@ export class Lottery extends SmartContract {
     }
 
     @method()
-    public draw(nonce: FixedArray<bigint, 2>, sig: Sig) {
+    public draw(nonce: FixedArray<bigint, 5>, sig: Sig) {
         // Only owner can draw the winner
         assert(this.checkSig(sig, this.owner), 'Only the owner can draw')
         assert(!this.isOver, 'Lottery has already been drawn')
@@ -84,14 +84,14 @@ export class Lottery extends SmartContract {
 
         let sum = 0n
 
-        for (let i = 0; i < 2; i++) {
+        for (let i = 0; i < 5; i++) {
             assert(sha256(int2ByteString(nonce[i])) == this.nonceHashes[i])
 
             sum += nonce[i]
         }
 
-        const winner: PubKey = this.participants[Number(sum % BigInt(2))]
-        console.log(Number(sum % BigInt(2)))
+        const winner: PubKey = this.participants[Number(sum % BigInt(5))]
+        // console.log(Number(sum % BigInt(5)))
 
         // Transfer funds to winner
         const outputs =
@@ -139,17 +139,17 @@ export class Lottery extends SmartContract {
     static async drawTxBuilder(
         current: Lottery,
         options: MethodCallOptions<Lottery>,
-        nonce: FixedArray<bigint, 2>
+        nonce: FixedArray<bigint, 5>
     ): Promise<ContractTransaction> {
         let sum = 0n
 
-        for (let i = 0; i < 2; i++) {
+        for (let i = 0; i < 5; i++) {
             assert(sha256(int2ByteString(nonce[i])) == current.nonceHashes[i])
             sum += nonce[i]
         }
-        const winner: PubKey = current.participants[Number(sum % BigInt(2))]
+        const winner: PubKey = current.participants[Number(sum % BigInt(5))]
 
-        console.log(current.owner)
+        // console.log(current.owner)
         
         const unsignedTx: bsv.Transaction = new bsv.Transaction()
             // add contract input

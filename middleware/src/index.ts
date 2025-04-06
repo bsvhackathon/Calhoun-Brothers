@@ -9,11 +9,17 @@ import path from 'path'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import { connectToDatabase, Transaction, Identity } from 'mongo-tools'
+import { randomBytes } from 'crypto'
 
 // Load environment variables from .env file
 require('dotenv').config({ 
   path: path.resolve(__dirname, '../.env') 
 })
+
+function generateRandomNonce(): string {
+  const randomData = randomBytes(32)
+  return '0x' + randomData.toString('hex')
+}
 
 // Validate required environment variables
 if (!process.env.SERVER_PRIVATE_KEY) {
@@ -99,6 +105,7 @@ async function init() {
   app.get('/pay', async (req: AuthRequest, res: Response) => {
     let payment = ((req as any).payment)
     let auth = ((req as any).auth)
+    let publicKey = ((req as any).query.publicKey)
     
     // Generate a random session ID
     const sessionId = crypto.randomUUID();
@@ -109,11 +116,13 @@ async function init() {
       let identity = await Identity.findOne({ identityKey });
       
       if (!identity) {
-        identity = new Identity({ identityKey });
+        identity = new Identity({ identityKey, publicKey });
         await identity.save();
         console.log(`Created new identity: ${identityKey}`);
       }
       
+      const randomNonce = generateRandomNonce();
+      // console.log(randomNonce);
       // Create a transaction record
       const tx = new Transaction({
         tx: payment?.tx,
@@ -123,8 +132,11 @@ async function init() {
         identity: identity._id,
         gameStarted: false,
         gameOver: false,
-        gameScore: 0
+        gameScore: 0,
+        nonce: randomNonce
       });
+
+      // console.log(tx);
       
       await tx.save();
       console.log(`Created new transaction record: ${sessionId}`);

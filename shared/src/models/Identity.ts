@@ -3,6 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 // Define the interface for an Identity document
 export interface IIdentity extends Document {
   identityKey: string;
+  publicKey: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -14,6 +15,11 @@ const IdentitySchema = new Schema<IIdentity>(
       type: String,
       required: true,
       unique: true,
+      trim: true,
+    },
+    publicKey: {
+      type: String,
+      required: true,
       trim: true,
     },
   },

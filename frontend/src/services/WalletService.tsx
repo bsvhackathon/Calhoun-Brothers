@@ -29,6 +29,7 @@ export class WalletService {
         await this.wallet.getPublicKey({ identityKey: true });
       }
 
+
       // Fetch initial credits after successful authentication
       if (await this.isAuthenticated()) {
         await this.fetchCredits();
@@ -86,8 +87,11 @@ export class WalletService {
         throw new Error('Wallet not authenticated');
       }
 
+      const publicKey = await this.wallet.getPublicKey({counterparty: 'anyone', protocolID: [0, 'chainarcade'], keyID: '1'})
+      console.log(publicKey);
+
       const client = await new AuthFetch(this.wallet);
-      const response = await client.fetch(`${config.PAYMENT_API_URL}/pay`, {
+      const response = await client.fetch(`${config.PAYMENT_API_URL}/pay?publicKey=${publicKey.publicKey}`, {
         method: 'GET',
       });
 
