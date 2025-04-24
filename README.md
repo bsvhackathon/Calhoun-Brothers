@@ -2,6 +2,8 @@
 
 A blockchain-based gaming platform that integrates with the Metanet desktop wallet for transaction signing and uses a lottery system for game mechanics.
 
+> **Note:** While the core functionality of the project is working and fully operational, there are some minor implementation details that were identified during the hackathon. These are documented in the [GitHub Issues](https://github.com/your-username/Calhoun-Brothers/issues) tab. Feel free to check them out if you're interested in contributing or understanding the project's evolution.
+
 ## System Architecture
 
 ![System Architecture](docs/images/diagram.png)
