@@ -1,68 +1,139 @@
-# ChainGames
+# Calhoun Brothers Project
 
-A full-stack TypeScript application with Vite + React frontend and Express.js backend.
+A blockchain-based gaming platform that integrates with the Metanet desktop wallet for transaction signing and uses a lottery system for game mechanics.
 
 ## Project Structure
 
-```
-chaingames/
-├── frontend/          # Vite + React frontend
-├── backend/           # Express.js backend
-└── package.json       # Root package.json for workspace management
-```
+The project is organized into several key components:
+
+### Frontend
+- Integrates with Metanet desktop wallet for transaction signing
+- Communicates with backend for game state and data
+- Interacts with middleware for token/credit management
+- Built with modern web technologies
+
+### Middleware
+- Handles token/credit system using payment-middleware-express
+- Manages MongoDB connections and operations
+- Processes payments and credit distribution
+- Acts as an intermediary between frontend and backend
+
+### Backend
+- Exposes MongoDB data to frontend
+- Manages game state and player connections
+- Implements WebSocket for real-time game state updates
+- Validates player positions and game mechanics
+
+### Contracts
+- Contains the lottery smart contract implementation
+- Uses scrypt-ts for Bitcoin SV smart contract development
+- Handles lottery deployment, funding, and drawing
+- Updates MongoDB with contract state changes
+- Key files:
+  - `deploy.ts`: Handles contract deployment and lottery operations
+
+### Shared
+- Contains MongoDB models used across the project
+- Ensures consistent data structure throughout the application
+- Shared between frontend, backend, and middleware
 
 ## Prerequisites
 
-- Node.js (v18 or higher)
-- npm (v9 or higher)
+- Node.js v18
+- MongoDB
+- Metanet desktop wallet
+- Bitcoin SV node (for contract deployment)
 
-## Getting Started
+## Installation
 
-1. Install dependencies:
+1. Clone the repository
+2. Build shared package:
+   ```bash
+   cd shared
+   npm run clean
+   npm run build
+   cd ..
+   ```
+3. Install root dependencies:
    ```bash
    npm install
    ```
 
-2. Start development servers:
+## Environment Setup
+
+### MongoDB Setup
+Create a MongoDB database with the following credentials:
+- Username: admin
+- Password: chaingamesdog
+- Database: chain
+
+### Environment Files
+
+1. Backend (.env):
+   ```
+   JWT_SECRET=test
+   MONGODB_URI=mongodb://admin:chaingamesdog@localhost:27017/chain
+   PORT=3001
+   WEBSOCKET_URL=ws://localhost:3002
+   ```
+
+2. Frontend (.env):
+   ```
+   WEBSOCKET_URL=ws://localhost:3002
+   API_URL=http://localhost:3001
+   ```
+
+3. Middleware (.env):
+   ```
+   SERVER_PRIVATE_KEY=${use bsv/wallet-toolbox-examples to produce}
+   WALLET_STORAGE_URL=https://storage.babbage.systems
+   HTTP_PORT=3002
+   BSV_NETWORK=main
+   MONGODB_URI=mongodb://admin:chaingamesdog@localhost:27017/chain
+   JWT_SECRET=test
+   ```
+
+4. Contracts (.env):
+   ```
+   PRIVATE_KEY="look at deploy.ts file to see how to produce"
+   MONGODB_URI=mongodb://admin:chaingamesdog@localhost:27017/chain
+   NETWORK=mainnet
+   ```
+
+## Running the Application
+
+1. Start the main application:
    ```bash
    npm run dev
    ```
-   This will start both the frontend and backend servers concurrently.
+   This will start the frontend, backend, and middleware services.
 
-3. Build for production:
+2. Start the lottery contract service:
    ```bash
+   cd contracts
+   npm install
    npm run build
+   npm run deploy
    ```
+   This will handle the creation and settlement of lotteries.
 
-4. Start production servers:
-   ```bash
-   npm run start
-   ```
+## Smart Contract Development
 
-## Development
+The project uses scrypt-ts for Bitcoin SV smart contract development. Key features:
 
-- Frontend runs on: http://localhost:5173
-- Backend runs on: http://localhost:3001
+- Lottery contract deployment
+- Contract funding
+- Lottery drawing
+- State management
 
-## Available Scripts
+## Contributing
 
-- `npm run dev` - Start both frontend and backend in development mode
-- `npm run dev:frontend` - Start only frontend in development mode
-- `npm run dev:backend` - Start only backend in development mode
-- `npm run build` - Build both frontend and backend
-- `npm run start` - Start both frontend and backend in production mode
-- `npm run start:frontend` - Start only frontend in production mode
-- `npm run start:backend` - Start only backend in production mode
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
-## Tech Stack
+## License
 
-### Frontend
-- Vite
-- React
-- TypeScript
-- Tailwind CSS
-
-### Backend
-- Express.js
-- TypeScript
-- Node.js 
+[Add your license information here] 
