@@ -2,6 +2,10 @@
 
 A blockchain-based gaming platform that integrates with the Metanet desktop wallet for transaction signing and uses a lottery system for game mechanics.
 
+## System Architecture
+
+![System Architecture](docs/images/diagram.png)
+
 ## Project Structure
 
 The project is organized into several key components:
